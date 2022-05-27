@@ -7,8 +7,9 @@ import os
 import requests
 
 GCP_PROJECT_ID_URL = "http://metadata.google.internal/computeMetadata/v1/project/project-id"
-ICONIK_FILES_API = "https://app.iconik.io/API/files/v1"
-ICONIK_ASSETS_API = "https://app.iconik.io/API/assets/v1"
+ICONIK_API_BASE = "https://app.iconik.io"
+ICONIK_FILES_API = ICONIK_API_BASE + "/API/files/v1"
+ICONIK_ASSETS_API = ICONIK_API_BASE + "/API/assets/v1"
 X_BZ_SHARED_SECRET = "x-bz-secret"
 
 # Global HTTP session provides connection pooling
@@ -56,9 +57,35 @@ def get_secret(project_id, secret_id):
     return response.payload.data.decode("UTF-8")
 
 
+def get_objects(session, first_url, params=None):
+    """
+    Gets a list of objects from the iconik API. GETs the first_url and then
+    GETs next_url from the response until it is empty.
+    Args:
+        first_url (str): The initial URL to GET
+    Returns:
+        A list of objects
+    """
+    objects = []
+    url = first_url
+    while True:
+        res = session.get(url, params=params)
+        res.raise_for_status()
+        response = res.json()
+        objects.extend(response["objects"])
+        # Next URL is a path relative to ICONIK_API_BASE
+        url = ICONIK_API_BASE + response["next_url"] if "next_url" in response else None
+        if not url:
+            break
+
+    return objects
+
+
 def get_storage(name):
     """
-    Get a storage from its name
+    Get a storage from its name. Note - if there are multiple storages
+    with the same name, this function returns the first one returned
+    by iconik
     Args:
         name (str): The name of a storage
     Returns:
@@ -66,7 +93,7 @@ def get_storage(name):
     """
     response = session.get(f"{ICONIK_FILES_API}/storages/", params={"name": name})
     response.raise_for_status()
-    return response.json()["objects"][0]
+    return response.json()["objects"][0] if len(response.json()["objects"]) else None
 
 
 def get_collection(id):
@@ -80,6 +107,17 @@ def get_collection(id):
     response = session.get(f"{ICONIK_ASSETS_API}/collections/{id}")
     response.raise_for_status()
     return response.json()
+
+
+def get_collection_contents(id):
+    """
+    Get the contents of a collection from its id
+    Args:
+        id (str): The collection id
+    Returns:
+        A list of objects
+    """
+    return get_objects(session, f"{ICONIK_ASSETS_API}/collections/{id}/contents/")
 
 
 def get_format(asset_id, name):
@@ -106,9 +144,7 @@ def get_file_sets(asset_id, format_id, storage_id):
     Returns:
         A list of file sets
     """
-    response = session.get(f"{ICONIK_FILES_API}/assets/{asset_id}/formats/{format_id}/storages/{storage_id}/file_sets/")
-    response.raise_for_status()
-    return response.json()["objects"]
+    return get_objects(session, f"{ICONIK_FILES_API}/assets/{asset_id}/formats/{format_id}/storages/{storage_id}/file_sets/")
 
 
 def delete_and_purge_file_set(asset_id, file_set_id):
@@ -124,50 +160,85 @@ def delete_and_purge_file_set(asset_id, file_set_id):
     response.raise_for_status()
 
 
-def delete_file(asset_id, format_name, storage_id):
+def delete_asset_files(asset_id, format_name, storage_id):
     """
     Delete asset files of a given format from a storage
     Args:
-        asset_ids (str): The asset id
+        asset_id (str): The asset id
         format_name (str): The format name
         storage_id (str): The storage id
     """
     format = get_format(asset_id, format_name)
     file_sets = get_file_sets(asset_id, format["id"], storage_id)
-    for file_set in file_sets:
-        delete_and_purge_file_set(asset_id, file_set["id"])
+    if file_sets:
+        for file_set in file_sets:
+            delete_and_purge_file_set(asset_id, file_set["id"])
 
 
-def delete_files(asset_ids, format_name, storage_id):
+def delete_collection_files(collection_id, format_name, storage_id):
     """
-    Delete files of a given format from a storage for a list of assets
+    Delete asset files of a given format from a storage for the given 
+    collection, and all subcollections within that collection.
     Args:
-        asset_ids (str): A list of asset ids
+        collection_id (str): The collection id
         format_name (str): The format name
         storage_id (str): The storage id
     """
-    for asset_id in asset_ids:
-        delete_file(asset_id, format_name, storage_id)
+    for object in get_collection_contents(collection_id):
+        if object["type"] == "COLLECTION":
+            delete_collection_files(object["id"], format_name, storage_id)
+        elif object["type"] == "ASSET":
+            delete_asset_files(object["id"], format_name, storage_id)
 
 
-def copy_files(asset_ids, format_name, storage_id, path):
+def delete_files(request, format_name, storage_id):
     """
-    Copy files of a given format to a storage for a list of assets
+    Delete files of a given format from a storage for a custom action request
     Args:
-        asset_id (str): A list of asset ids
+        request (dict): A request containing a list of asset ids and/or 
+                        a list of collection ids
         format_name (str): The format name
         storage_id (str): The storage id
     """
-    payload = {
-        "object_ids": asset_ids,
-        "object_type": "assets",
-        "file_path": path,
-        "format_name": format_name
-    }
+    for asset_id in request["asset_ids"]:
+        delete_asset_files(asset_id, format_name, storage_id)
 
-    response = session.post(f"{ICONIK_FILES_API}/storages/{storage_id}/bulk/",
-                            json=payload)
-    response.raise_for_status()
+    for collection_id in request["collection_ids"]:
+        delete_collection_files(collection_id, format_name, storage_id)
+
+
+def copy_files(request, format_name, storage_id, path):
+    """
+    Copy files of a given format to a storage for a custom action request
+    Args:
+        request (dict): A request containing a list of asset ids and/or 
+                        a list of collection ids
+        format_name (str): The format name
+        storage_id (str): The storage id
+    """
+    if "asset_ids" in request and len(request["asset_ids"]) > 0:
+        payload = {
+            "object_ids": request["asset_ids"],
+            "object_type": "assets",
+            "file_path": path,
+            "format_name": format_name
+        }
+
+        response = session.post(f"{ICONIK_FILES_API}/storages/{storage_id}/bulk/",
+                                json=payload)
+        response.raise_for_status()
+
+    if "collection_ids" in request and len(request["collection_ids"]) > 0:
+        payload = {
+            "object_ids": request["collection_ids"],
+            "object_type": "collections",
+            "file_path": path,
+            "format_name": format_name
+        }
+
+        response = session.post(f"{ICONIK_FILES_API}/storages/{storage_id}/bulk/",
+                                json=payload)
+        response.raise_for_status()
 
 
 def log(project_id, severity, message, req=None):
@@ -278,21 +349,29 @@ def iconik_handler(req):
     format_name = os.environ.get("FORMAT_NAME", "ORIGINAL")
 
     # The target storage
-    storage_id = get_storage(os.environ["STORAGE_NAME"])["id"]
+    storage = get_storage(os.environ["STORAGE_NAME"])
+    if not storage:
+        log(project_id, "ERROR", f"Can't find configured storage: {request.get(os.environ['STORAGE_NAME'])}")
+        abort(500)
 
     # Path within the storage
     storage_path = os.environ.get("STORAGE_PATH", "/")
 
-    # Add or remove files from the storage?
+    # Check that context is as expected
+    if request.get("context") not in ["ASSET", "COLLECTION", "BULK"]:
+        log(project_id, "ERROR", f"Invalid context: {request.get('context')}")
+        abort(400)
+
+    # Perform the requested operation
     if (req.path == "/add"):
-        copy_files(asset_ids=request["asset_ids"], 
+        copy_files(request=request, 
                    format_name=format_name,
-                   storage_id=storage_id,
+                   storage_id=storage["id"],
                    path=storage_path)        
     elif (req.path == "/remove"):
-        delete_files(asset_ids=request["asset_ids"], 
+        delete_files(request=request, 
                      format_name=format_name,
-                     storage_id=storage_id)
+                     storage_id=storage["id"])
     else:
         log(project_id, "ERROR", f"Invalid path: {req.path}")
         abort(404)
