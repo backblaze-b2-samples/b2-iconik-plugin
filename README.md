@@ -1,5 +1,5 @@
-iconik Storage Plugin for B2
-============================
+Backblaze B2 Storage Plugin for iconik
+======================================
 
 This plugin makes it easy to manage assets when using iconik storage options with different price/performance/functionality. For example, you can store master copies of full resolution assets in Backblaze B2 Cloud Storage, working on the iconik proxy files in iconik and Premiere Pro. When editing is complete, you can use the plugin to copy the masters to LucidLink for full-resolution corrections and rendering. Once the final renders are approved, you can again use the plugin to remove the copies from LucidLink, safe in the knowledge that the masters are safely archived in B2.
 
@@ -23,7 +23,7 @@ Configure the LucidLink client to access the desired FileSpace. Configure ISG to
 Create an iconik Application Token
 ----------------------------------
 
-Create an [iconik Application Token](https://app.iconik.io/help/pages/admin/appl_tokens) for the iconik Storage Plugin and make a note of the token name and value.
+Create an [iconik Application Token](https://app.iconik.io/help/pages/admin/appl_tokens) for the plugin and make a note of the token name and value.
 
 Setup the Function
 ------------------
