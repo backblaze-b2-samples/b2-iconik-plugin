@@ -74,7 +74,7 @@ def get_objects(session, first_url, params=None):
         response = res.json()
         objects.extend(response["objects"])
         # Next URL is a path relative to ICONIK_API_BASE
-        url = ICONIK_API_BASE + response["next_url"] if "next_url" in response else None
+        url = ICONIK_API_BASE + response["next_url"] if response.get("next_url") else None
         if not url:
             break
 
@@ -216,7 +216,7 @@ def copy_files(request, format_name, storage_id, path):
         format_name (str): The format name
         storage_id (str): The storage id
     """
-    if "asset_ids" in request and len(request["asset_ids"]) > 0:
+    if request.get("asset_ids") and len(request["asset_ids"]) > 0:
         payload = {
             "object_ids": request["asset_ids"],
             "object_type": "assets",
@@ -228,7 +228,7 @@ def copy_files(request, format_name, storage_id, path):
                                 json=payload)
         response.raise_for_status()
 
-    if "collection_ids" in request and len(request["collection_ids"]) > 0:
+    if request.get("collection_ids") and len(request["collection_ids"]) > 0:
         payload = {
             "object_ids": request["collection_ids"],
             "object_type": "collections",
@@ -351,7 +351,7 @@ def iconik_handler(req):
     # The target storage
     storage = get_storage(os.environ["STORAGE_NAME"])
     if not storage:
-        log(project_id, "ERROR", f"Can't find configured storage: {request.get(os.environ['STORAGE_NAME'])}")
+        log(project_id, "ERROR", f"Can't find configured storage: {os.environ['STORAGE_NAME']}")
         abort(500)
 
     # Path within the storage
