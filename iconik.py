@@ -43,26 +43,29 @@ class Iconik:
             "Auth-Token": auth_token
         })
 
-    def __get(self, url, params=None, raise_for_status=False):
+    def __get(self, url, params=None, raise_for_status=True):
         self.logger.log("DEBUG", {"method": "GET", "url": url, "params": params})
         response = self.session.get(url, params=params)
-        self.logger.log("DEBUG", {"status_code": response.status_code, "payload": response.json()})
+        payload = response.json() if response.text else None
+        self.logger.log("DEBUG", {"status_code": response.status_code, "payload": payload})
         if raise_for_status:
             response.raise_for_status()
         return response
 
-    def __delete(self, url, raise_for_status=False):
+    def __delete(self, url, raise_for_status=True):
         self.logger.log("DEBUG", {"method": "DELETE", "url": url})
         response = self.session.delete(url)
-        self.logger.log("DEBUG", {"status_code": response.status_code})
+        payload = response.json() if response.text else None
+        self.logger.log("DEBUG", {"status_code": response.status_code, "payload": payload})
         if raise_for_status:
             response.raise_for_status()
         return response
 
-    def __post(self, url, json=None, raise_for_status=False):
+    def __post(self, url, json=None, raise_for_status=True):
         self.logger.log("DEBUG", {"method": "POST", "url": url, "json": json})
         response = self.session.post(url, json=json)
-        self.logger.log("DEBUG", {"status_code": response.status_code, "payload": response.json()})
+        payload = response.json() if response.text else None
+        self.logger.log("DEBUG", {"status_code": response.status_code, "payload": payload})
         if raise_for_status:
             response.raise_for_status()
         return response
@@ -244,7 +247,6 @@ class Iconik:
 
             response = self.__post(f"{ICONIK_FILES_API}/storages/{target_storage_id}/bulk/",
                                    json=payload)
-            response.raise_for_status()
             asset_job_id = response.json()["job_id"]
 
         if request.get("collection_ids") and len(request["collection_ids"]) > 0:
@@ -257,7 +259,6 @@ class Iconik:
 
             response = self.__post(f"{ICONIK_FILES_API}/storages/{target_storage_id}/bulk/",
                                    json=payload)
-            response.raise_for_status()
             collection_job_id = response.json()["job_id"]
 
         if sync:
@@ -305,4 +306,3 @@ class Iconik:
             f"{ICONIK_ASSETS_API}/custom_actions/{context}/",
             json=action
         )
-        response.raise_for_status()
