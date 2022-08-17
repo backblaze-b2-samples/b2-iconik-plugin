@@ -267,7 +267,6 @@ class Iconik:
                     sleep(1)
                     response = self.__get(f"{ICONIK_JOBS_API}/jobs/{asset_job_id}/")
                     job = response.json()
-                    print(f'{job["id"]} - {job["status"]}')
                     if self.job_done(job):
                         break
                 if not self.job_succeeded(job):
@@ -279,7 +278,6 @@ class Iconik:
                     sleep(1)
                     response = self.__get(f"{ICONIK_JOBS_API}/jobs/{collection_job_id}/")
                     job = response.json()
-                    print(f'{job["id"]} - {job["status"]}')
                     if self.job_done(job):
                         break
                 if not self.job_succeeded(job):
