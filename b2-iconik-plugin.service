@@ -1,0 +1,12 @@
+[Unit]
+Description=Backblaze B2 iconik Plugin
+After=network.target
+
+[Service]
+User=pat
+WorkingDirectory=/home/pat/b2-iconik-plugin
+ExecStart=/home/pat/.local/bin/gunicorn -b localhost:8000 -w 4 plugin:app
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

@@ -7,26 +7,105 @@ Here's how it works:
 
 > A videographer saves full resolution video files to a Backblaze B2 Cloud Storage bucket, either directly or via iconik Storage Gateway. The director can review the footage in the iconik browser UI, set in and out points, and work with the iconik proxy files in Premiere Pro.
 >
-> When it's time to work with the full resolution files, a user right-clicks the assets and selects 'Add to LucidLink'. iconik sends a custom action notification to the plugin, which uses the iconik Files API to request that the files are copied to the LucidLink storage. iconik relays the request to an instance of iconik Storage Gateway, which retrieves the files from B2 and saves them to its local LucidLink Filespace.
+> When it's time to work with the full resolution files, a user right-clicks the collections and/or assets and selects 'Add to LucidLink'. iconik sends a custom action notification to the plugin, which uses the iconik Files API to request that all of the selected collections and assets are copied to the LucidLink storage. iconik relays the request to an instance of iconik Storage Gateway, which retrieves the files from B2 and saves them to its local LucidLink Filespace.
 >
-> The production team can now access the full resolution assets via LucidLink, performing final corrections and rendering output in Premiere Pro at full resolution. Once the rendered deliverable is approved, a user can right-click the asset in iconik and select 'Remove from LucidLink'. iconik sends a custom action message to the plugin, which deletes the full resolution asset files from LucidLink, leaving the master copies in B2.
+> The production team can now access the full resolution assets via LucidLink, performing final corrections and rendering output in Premiere Pro at full resolution. If the workflow includes creating files in LucidLink, you can configure the iconik Storage Gateway to automatically upload them to Backblaze B2.
+> 
+> Once the rendered deliverable is approved, a user can right-click the collections and/or assets in iconik and select 'Remove from LucidLink'. iconik sends a custom action message to the plugin, which ensures that all assets in LucidLink are present in Backblaze B2 before deleting the files from LucidLink.
 
-The plugin is implemented as a [Google Cloud Function](https://cloud.google.com/functions) in Python.
+The plugin is implemented in Python and may be deployed as a standalone Flask app or as a [Google Cloud Function](https://cloud.google.com/functions).
+
+Create an iconik Storage for your Backblaze B2 Bucket
+-----------------------------------------------------
+
+You must create an iconik Storage with Storage Purpose **Files** and Storage Type **Backblaze B2** with access to your Backblaze B2 bucket. Enable scan for the storage and set it to auto scan with an appropriate interval. Make a note of the storage ID.
 
 Deploy iconik Storage Gateway
 -----------------------------
 
 You must deploy both [iconik Storage Gateway](https://app.iconik.io/help/pages/isg/) (ISG) and the [LucidLink client](https://www.lucidlink.com/download) to a machine with access to iconik, LucidLink and B2. Either [Vultr](https://www.vultr.com/) or [Equinix Metal](https://metal.equinix.com/) are ideal for this purpose, as they both enjoy zero cost egress from B2. If you deploy ISG elsewhere, you will be paying $10/TB for data downloaded from B2.
 
-Configure the LucidLink client to access the desired FileSpace. Configure ISG to use the LucidLink directory as [Files Storage](https://app.iconik.io/help/pages/isg/files_storage). Make a note of the storage name.
+Configure the LucidLink client to access the desired FileSpace. Configure ISG to use the LucidLink directory as [Files Storage](https://app.iconik.io/help/pages/isg/files_storage). Make a note of the storage ID.
 
 Create an iconik Application Token
 ----------------------------------
 
 Create an [iconik Application Token](https://app.iconik.io/help/pages/admin/appl_tokens) for the plugin and make a note of the token name and value.
 
-Setup the Function
-------------------
+Deploy the Plugin
+-----------------
+
+Create a random string to use as a secret shared by iconik and the plugin. For example, with `openssl`:
+
+    openssl rand -hex 32
+
+Keep a note of the shared secret.
+
+### As a Standalone Flask App
+
+#### Prerequisites
+
+* [Python 3.9+](https://www.python.org/downloads/)
+* [pip](https://pypi.org/project/pip/)
+
+#### Deployment
+
+Clone this project:
+
+	git clone https://github.com/backblaze-b2-samples/b2-iconik-plugin.git
+
+Change to the plugin directory and install the required Python modules:
+
+	cd b2-iconik-plugin
+	pip install -r requirements.txt
+
+Create a file in the plugin directory named `.env` containing your iconik token name and value, your storage IDs and the shared secret you created.
+
+	ICONIK_ID = '<your iconik token name>'
+	ICONIK_TOKEN = '<your iconik token value>'
+	LL_STORAGE_ID = '<your LucidLink / ISG storage ID>'
+	B2_STORAGE_ID = '<your B2 storage ID>'
+	BZ_SHARED_SECRET = '<your shared secret>'
+	STORAGE_PATH: '<optional: defaults to />'
+
+Open `b2-iconik-plugin.service` and edit the `User`,
+`WorkingDirectory` and `ExecStart` entries to match your system configuration.
+
+Deploy the plugin as a systemd service:
+
+	sudo cp b2-iconik-plugin.service /etc/systemd/system
+	sudo systemctl daemon-reload
+	sudo systemctl start b2-iconik-plugin
+	sudo systemctl status b2-iconik-plugin
+
+You should see output similar to this:
+
+	● b2-iconik-plugin.service - Backblaze B2 iconik Plugin
+	Loaded: loaded (/etc/systemd/system/b2-iconik-plugin.service; disabled; vendor preset: enabled)
+	Active: active (running) since Tue 2022-08-16 19:06:36 UTC; 11s ago
+	Main PID: 743400 (gunicorn)
+	Tasks: 5 (limit: 4678)
+	Memory: 92.8M
+	CPU: 804ms
+	CGroup: /system.slice/b2-iconik-plugin.service
+	├─743400 /usr/bin/python3 /home/pat/.local/bin/gunicorn -b localhost:8000 -w 4 plugin:app
+	├─743401 /usr/bin/python3 /home/pat/.local/bin/gunicorn -b localhost:8000 -w 4 plugin:app
+	├─743402 /usr/bin/python3 /home/pat/.local/bin/gunicorn -b localhost:8000 -w 4 plugin:app
+	├─743403 /usr/bin/python3 /home/pat/.local/bin/gunicorn -b localhost:8000 -w 4 plugin:app
+	└─743404 /usr/bin/python3 /home/pat/.local/bin/gunicorn -b localhost:8000 -w 4 plugin:app
+	
+	Aug 16 19:06:36 vultr systemd[1]: Started Backblaze B2 iconik Plugin.
+	Aug 16 19:06:36 vultr gunicorn[743400]: [2022-08-16 19:06:36 +0000] [743400] [INFO] Starting gunicorn 20.1.0
+	Aug 16 19:06:36 vultr gunicorn[743400]: [2022-08-16 19:06:36 +0000] [743400] [INFO] Listening at: http://127.0.0.1:8000 (743400)
+	Aug 16 19:06:36 vultr gunicorn[743400]: [2022-08-16 19:06:36 +0000] [743400] [INFO] Using worker: sync
+	Aug 16 19:06:36 vultr gunicorn[743401]: [2022-08-16 19:06:36 +0000] [743401] [INFO] Booting worker with pid: 743401
+	Aug 16 19:06:36 vultr gunicorn[743402]: [2022-08-16 19:06:36 +0000] [743402] [INFO] Booting worker with pid: 743402
+	Aug 16 19:06:36 vultr gunicorn[743403]: [2022-08-16 19:06:36 +0000] [743403] [INFO] Booting worker with pid: 743403
+	Aug 16 19:06:36 vultr gunicorn[743404]: [2022-08-16 19:06:36 +0000] [743404] [INFO] Booting worker with pid: 743404
+
+### As a Google Cloud Function
+
+#### Setup the function
 
 1. [Create a Google Cloud project](https://cloud.google.com/resource-manager/docs/creating-managing-projects)
 2. Ensure that [billing is enabled](https://cloud.google.com/billing/docs/how-to/verify-billing-enabled) for the project.
@@ -41,18 +120,14 @@ Setup the Function
 
 		git clone git@github.com:backblaze-b2-samples/b2-iconik-plugin.git
 
-Configure the Function
-----------------------
-
-Create a random string to use as a secret shared by iconik and the cloud function. For example, with `openssl`:
-
-    openssl rand -hex 32
+#### Configure the Function
 
 Create the file `.env.yaml` in the project directory, with the following content:
 
 	ICONIK_ID: '<required: your iconik application token id>'
 	FORMAT_NAME: '<optional: defaults to ORIGINAL>'
-	STORAGE_NAME: '<required: target iconik storage>'
+	LL_STORAGE_ID: '<required: target iconik storage for LucidLink>'
+	B2_STORAGE_ID: '<required: target iconik storage for LucidLink>'
 	STORAGE_PATH: '<optional: defaults to />'
 
 [Create the following secrets](https://cloud.google.com/secret-manager/docs/creating-and-accessing-secrets#create) in Google Secret Manager:
@@ -60,8 +135,7 @@ Create the file `.env.yaml` in the project directory, with the following content
 	iconik-token: '<your iconik application token value>'
 	bz-shared-secret: '<your shared secret>'
 
-Deploy the Function
--------------------
+#### Deploy the Function
 
 From the command line in the project directory, run
 
@@ -83,18 +157,13 @@ You can view logs for the function with:
 Create iconik Custom Actions
 ----------------------------
 
-Run the included `create_custom_actions.py` script with the iconik Application Token and shared secret as environment variables, like this:
+Run the included `create_custom_actions.py` script with endpoint of the plugin as an argument:
 
-	ICONIK_ID='<your iconik application token id>' \
-		ICONIK_TOKEN='<your iconik application token value>' \
-		BZ_SHARED_SECRET='<your shared secret>' \
-		python create_custom_actions.py
+	python create_custom_actions.py <your plugin endpoint>
 
 You can delete the custom actions, if necessary, with:
 
-	ICONIK_ID='<your iconik application token id>' \
-		ICONIK_TOKEN='<your iconik application token value>' \
-		python delete_custom_actions.py
+	python delete_custom_actions.py <your plugin endpoint>
 
 Test the Integration
 --------------------
@@ -122,14 +191,17 @@ Modifying the Code
 
 You are free to modify the code for your own purposes.
 
-`main_test.py` contains a set of system tests covering expected operation and various errors.
+There is a set of tests covering expected operation and various errors.
 
-	% pytest main_test.py
-	=============================================== test session starts ===============================================
+	% pytest
+	================================================================== test session starts ==================================================================
 	platform darwin -- Python 3.10.2, pytest-7.1.2, pluggy-1.0.0
-	rootdir: /Users/ppatterson/src/backblaze-b2-mam-gateway
-	collected 11 items                                                                                                
-
-	main_test.py ...........                                                                                    [100%]
-
-	=============================================== 11 passed in 0.60s ================================================
+	rootdir: /Users/ppatterson/src/b2-iconik-plugin
+	collected 29 items
+	
+	app_test.py ...........                                                                                                                           [ 37%]
+	gcp_test.py ..                                                                                                                                    [ 44%]
+	iconik_test.py .....                                                                                                                              [ 62%]
+	main_test.py ...........                                                                                                                          [100%]
+	
+	================================================================== 29 passed in 4.62s ===================================================================

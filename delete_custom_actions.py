@@ -1,21 +1,8 @@
 import argparse
 import os
-import requests
 
 from dotenv import load_dotenv
-from functools import reduce
-from main import get_objects
-
-ICONIK_ASSETS_API = "https://app.iconik.io/API/assets/v1"
-
-def urljoin(*args):
-    """
-    Utility function to combine parts of a URL in a sane way
-    """
-    return reduce(
-        lambda a, b: (a.rstrip('/') + '/' + b.lstrip('/')), 
-        args
-    ) if args else ''
+from iconik import Iconik, ICONIK_ASSETS_API
 
 
 def main():
@@ -28,19 +15,12 @@ def main():
                         help="your function's endpoint url")
     args = parser.parse_args()
 
-    session = requests.Session()
-    session.headers.update({
-        "App-ID": os.environ["ICONIK_ID"],
-        "Auth-Token": os.environ["ICONIK_TOKEN"]
-    })
+    iconik = Iconik(os.environ["ICONIK_ID"], os.environ["ICONIK_TOKEN"])
 
-    for action in get_objects(session, f"{ICONIK_ASSETS_API}/custom_actions/"):
+    for action in iconik.get_objects(f"{ICONIK_ASSETS_API}/custom_actions/"):
         if action["url"].startswith(args.endpoint):
             print(f"Deleting '{action['title']}' action for '{action['context']}'")
-            response = session.delete(
-                f"{ICONIK_ASSETS_API}/custom_actions/{action['context']}/{action['id']}"
-            )
-            response.raise_for_status()        
+            iconik.delete_action(action)
 
 
 if __name__ == "__main__":
