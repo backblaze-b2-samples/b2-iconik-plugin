@@ -11,25 +11,11 @@ X_BZ_SHARED_SECRET = "x-bz-secret"
 
 def iconik_handler(req, iconik, logger, bz_shared_secret):
     """
-    Handles iconik webhook and custom action.
+    Handles iconik custom action.
 
-    Webhook configuration:
-        URL: (Your Google Cloud Function URL)/webhook
-        Event type: Collections
-        Object ID: (Empty)
-        Realm: Contents
-        Operation: Create
-
-    Custom Action configuration:
-        Context: Asset
-        Type: Post
-        URL: (Your Google Cloud Function URL)/action
-        App Name: An application
-
-        :param req: The request object
-        :param iconik:
-        :param logger:
-        :param bz_shared_secret:
+    "/add" route copies specified assets to LucidLink
+    "/remove" route copies specified assets to B2, then deletes
+        those assets' files from LucidLink
     """
     logger.log("DEBUG", req.get_data(as_text=True), req)
 

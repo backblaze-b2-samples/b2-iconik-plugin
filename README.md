@@ -1,7 +1,7 @@
 Backblaze B2 Storage Plugin for iconik
 ======================================
 
-This plugin makes it easy to manage assets when using iconik storage options with different price/performance/functionality. For example, you can store master copies of full resolution assets in Backblaze B2 Cloud Storage, working on the iconik proxy files in iconik and Premiere Pro. When editing is complete, you can use the plugin to copy the masters to LucidLink for full-resolution corrections and rendering. Once the final renders are approved, you can again use the plugin to remove the copies from LucidLink, safe in the knowledge that the masters are safely archived in B2.
+This plugin makes it easy to manage assets when using (iconik)[https://www.iconik.io/] storage options with different price/performance/functionality. For example, you can store master copies of full resolution assets in (Backblaze B2 Cloud Storage)[https://www.backblaze.com/b2/cloud-storage.html], working on the iconik proxy files in iconik and Premiere Pro. When editing is complete, you can use the plugin to copy the masters to a [LucidLink](https://www.lucidlink.com/) Filespace for full-resolution corrections and rendering. Once the final renders are approved, you can again use the plugin to remove the copies from LucidLink, safe in the knowledge that the masters are safely archived in B2.
 
 Here's how it works:
 
@@ -103,6 +103,14 @@ You should see output similar to this:
 	Aug 16 19:06:36 vultr gunicorn[743403]: [2022-08-16 19:06:36 +0000] [743403] [INFO] Booting worker with pid: 743403
 	Aug 16 19:06:36 vultr gunicorn[743404]: [2022-08-16 19:06:36 +0000] [743404] [INFO] Booting worker with pid: 743404
 
+Your plugin's endpoint comprises the instance's public IP address or hostname plus the Gunicorn port number. For example, if your plugin is running at 1.2.3.4 and you left the Gunicorn port as the default 8000, your plugin endpoint is `http://1.2.3.4:8000/`
+
+You can test connectivity to the plugin by opening `http://1.2.3.4:8000/add` in a browser. You should see an error response similar to:
+
+    {"message": "The method is not allowed for the requested URL."}
+
+Note - for production deployment, you should [deploy Nginx as an HTTP proxy for Gunicorn](https://docs.gunicorn.org/en/stable/deploy.html#nginx-configuration) and [configure Nginx as an HTTPS server](http://nginx.org/en/docs/http/configuring_https_servers.html). 
+
 ### As a Google Cloud Function
 
 #### Setup the function
@@ -148,7 +156,13 @@ Make a note of the `httpsTrigger.url` property, or find it with:
 
 It should look like this:
 
-    https://GCP_REGION-PROJECT_ID.cloudfunctions.net/iconik_handler
+    https://<GCP_REGION-PROJECT_ID>.cloudfunctions.net/iconik_handler
+
+You'll use this endpoint when you create the custom actions in iconik in the next step.
+
+You can test connectivity to the plugin by opening `https://<GCP_REGION-PROJECT_ID>.cloudfunctions.net/iconik_handler/add` in a browser. You should see an error response similar to:
+
+    {"message": "The method is not allowed for the requested URL."}
 
 You can view logs for the function with:
 
@@ -157,7 +171,7 @@ You can view logs for the function with:
 Create iconik Custom Actions
 ----------------------------
 
-Run the included `create_custom_actions.py` script with endpoint of the plugin as an argument:
+Run the included `create_custom_actions.py` script with the endpoint of the plugin as an argument:
 
 	python create_custom_actions.py <your plugin endpoint>
 

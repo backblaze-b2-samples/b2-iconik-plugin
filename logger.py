@@ -1,16 +1,17 @@
+import datetime
 import json
 
 
 class Logger:
     def log(self, severity, message, req=None):
         """
-	    Emit a structured log message
-	    Args:
-	        severity (str): "INFO", "DEBUG", "ERROR" etc
-	        message : The message to log
-	        req (flask.Request): The request object.
-	        <http://flask.pocoo.org/docs/1.0/api/#flask.Request>
-	    """
+        Emit a structured log message
+        Args:
+            severity (str): "INFO", "DEBUG", "ERROR" etc
+            message : The message to log
+            req (flask.Request): The request object.
+            <https://flask.pocoo.org/docs/1.0/api/#flask.Request>
+        """
 
         http_request = {
             "httpRequest": {
@@ -24,6 +25,7 @@ class Logger:
         } if req else {}
 
         entry = http_request | {
+            "timestamp": datetime.datetime.now().isoformat(sep=' '),
             "severity": severity,
             "message": message
         }
