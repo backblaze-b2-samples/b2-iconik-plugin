@@ -3,13 +3,15 @@ from flask import abort, Response
 import os
 
 # Names for secrets
+from iconik import Iconik
+
 AUTH_TOKEN_NAME = "iconik-token"
 SHARED_SECRET_NAME = "bz-shared-secret"
 
 X_BZ_SHARED_SECRET = "x-bz-secret"
 
 
-def iconik_handler(req, iconik, logger, bz_shared_secret):
+def iconik_handler(req, logger, bz_shared_secret):
     """
     Handles iconik custom action.
 
@@ -45,6 +47,9 @@ def iconik_handler(req, iconik, logger, bz_shared_secret):
 
     # The format that we're going to copy
     format_name = os.environ.get("FORMAT_NAME", "ORIGINAL")
+
+    # Create an iconic API client
+    iconik = Iconik(os.environ['ICONIK_ID'], request.get("auth_token"))
 
     # The working storage
     working_storage = iconik.get_storage(id=os.environ["LL_STORAGE_ID"])

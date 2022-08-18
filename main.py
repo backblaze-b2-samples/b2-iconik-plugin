@@ -32,7 +32,6 @@ def gcp_iconik_handler(req):
     project_id = get_project_id()
     return iconik_handler(
         req, 
-        Iconik(os.environ["ICONIK_ID"], get_secret(project_id, "iconik-token")), 
-        GcpLogger(project_id), 
+        GcpLogger(project_id),
         get_secret(project_id, SHARED_SECRET_NAME)
     )

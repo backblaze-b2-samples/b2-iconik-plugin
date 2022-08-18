@@ -45,6 +45,7 @@ def main():
     for operation in OPERATIONS:
         for context in CONTEXTS:
             iconik.add_action(context,
+                              os.environ["ICONIK_ID"],
                               urljoin(endpoint, operation["path"]),
                               operation["title"],
                               os.environ["BZ_SHARED_SECRET"])

@@ -1,23 +1,19 @@
-import json
 import os
 
 # Never put credentials in your code!
 from dotenv import load_dotenv
-from flask import Flask, request, abort
-from flask_restful import Resource, Api, reqparse
+from flask import Flask, request
+from flask_restful import Resource, Api
 from common import iconik_handler
 
-from iconik import Iconik
 from logger import Logger
 
 
 class Plugin(Resource):
     def __init__(self):
         load_dotenv()
-        self.iconik = Iconik(os.environ["ICONIK_ID"], os.environ['ICONIK_TOKEN'])
+        self.bz_shared_secret = os.environ['BZ_SHARED_SECRET']
         self.logger = Logger()
-        self.bz_shared_secret = os.environ["BZ_SHARED_SECRET"]
-
 
     def post(self, operation):
         """
@@ -41,7 +37,7 @@ class Plugin(Resource):
             Response object using `make_response`
             <http://flask.pocoo.org/docs/1.0/api/#flask.Flask.make_response>.
         """
-        return iconik_handler(request, self.iconik, self.logger, self.bz_shared_secret)
+        return iconik_handler(request, self.logger, self.bz_shared_secret)
 
 
 def create_app():

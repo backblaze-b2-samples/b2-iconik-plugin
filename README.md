@@ -30,7 +30,7 @@ Configure the LucidLink client to access the desired FileSpace. Configure ISG to
 Create an iconik Application Token
 ----------------------------------
 
-Create an [iconik Application Token](https://app.iconik.io/help/pages/admin/appl_tokens) for the plugin and make a note of the token name and value.
+Create an [iconik Application Token](https://app.iconik.io/help/pages/admin/appl_tokens) for the plugin and make a note of the token id and value.
 
 Deploy the Plugin
 -----------------
@@ -61,11 +61,11 @@ Change to the plugin directory and install the required Python modules:
 
 Create a file in the plugin directory named `.env` containing your iconik token name and value, your storage IDs and the shared secret you created.
 
-	ICONIK_ID = '<your iconik token name>'
-	ICONIK_TOKEN = '<your iconik token value>'
-	LL_STORAGE_ID = '<your LucidLink / ISG storage ID>'
-	B2_STORAGE_ID = '<your B2 storage ID>'
-	BZ_SHARED_SECRET = '<your shared secret>'
+	ICONIK_ID: '<required: your iconik application token id>'
+	FORMAT_NAME: '<optional: defaults to ORIGINAL>'
+	LL_STORAGE_ID = '<required: your LucidLink / ISG storage ID>'
+	B2_STORAGE_ID = '<required: your B2 storage ID>'
+	BZ_SHARED_SECRET = '<required: your shared secret>'
 
 Open `b2-iconik-plugin.service` and edit the `User`,
 `WorkingDirectory` and `ExecStart` entries to match your system configuration.
@@ -136,9 +136,8 @@ Create the file `.env.yaml` in the project directory, with the following content
 	LL_STORAGE_ID: '<required: target iconik storage for LucidLink>'
 	B2_STORAGE_ID: '<required: target iconik storage for LucidLink>'
 
-[Create the following secrets](https://cloud.google.com/secret-manager/docs/creating-and-accessing-secrets#create) in Google Secret Manager:
+[Create the following secret](https://cloud.google.com/secret-manager/docs/creating-and-accessing-secrets#create) in Google Secret Manager:
 
-	iconik-token: '<your iconik application token value>'
 	bz-shared-secret: '<your shared secret>'
 
 #### Deploy the Function
@@ -171,10 +170,12 @@ Create iconik Custom Actions
 
 Run the included `create_custom_actions.py` script with the endpoint of the plugin as an argument:
 
+	ICONIK_TOKEN =  '<your iconik application token value>' \
 	python create_custom_actions.py <your plugin endpoint>
 
 You can delete the custom actions, if necessary, with:
 
+	ICONIK_TOKEN =  '<your iconik application token value>' \
 	python delete_custom_actions.py <your plugin endpoint>
 
 Test the Integration

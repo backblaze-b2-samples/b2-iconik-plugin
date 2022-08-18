@@ -289,7 +289,7 @@ class Iconik:
             f"{ICONIK_ASSETS_API}/custom_actions/{action['context']}/{action['id']}"
         )
 
-    def add_action(self, context, url, title, shared_secret):
+    def add_action(self, context, app_id, url, title, shared_secret):
         action = {
             "type": "POST",
             "context": context,
@@ -297,7 +297,8 @@ class Iconik:
             "url": url,
             "headers": {
                 "x-bz-secret": shared_secret
-            }
+            },
+            "app_id": app_id
         }
         print(f"Creating '{title}' action for '{context}'")
         response = self.__post(
