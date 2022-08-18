@@ -66,7 +66,6 @@ Create a file in the plugin directory named `.env` containing your iconik token 
 	LL_STORAGE_ID = '<your LucidLink / ISG storage ID>'
 	B2_STORAGE_ID = '<your B2 storage ID>'
 	BZ_SHARED_SECRET = '<your shared secret>'
-	STORAGE_PATH: '<optional: defaults to />'
 
 Open `b2-iconik-plugin.service` and edit the `User`,
 `WorkingDirectory` and `ExecStart` entries to match your system configuration.
@@ -136,7 +135,6 @@ Create the file `.env.yaml` in the project directory, with the following content
 	FORMAT_NAME: '<optional: defaults to ORIGINAL>'
 	LL_STORAGE_ID: '<required: target iconik storage for LucidLink>'
 	B2_STORAGE_ID: '<required: target iconik storage for LucidLink>'
-	STORAGE_PATH: '<optional: defaults to />'
 
 [Create the following secrets](https://cloud.google.com/secret-manager/docs/creating-and-accessing-secrets#create) in Google Secret Manager:
 

@@ -225,7 +225,7 @@ class Iconik:
     def job_done(self, job):
         return job["status"] in DONE_STATUS_LIST
 
-    def copy_files(self, request, format_name, target_storage_id, path, sync=False):
+    def copy_files(self, request, format_name, target_storage_id, sync=False):
         """
         Copy files of a given format to a storage for a custom action request
         Args:
@@ -241,7 +241,6 @@ class Iconik:
             payload = {
                 "object_ids": request["asset_ids"],
                 "object_type": "assets",
-                "file_path": path,
                 "format_name": format_name
             }
 
@@ -253,7 +252,6 @@ class Iconik:
             payload = {
                 "object_ids": request["collection_ids"],
                 "object_type": "collections",
-                "file_path": path,
                 "format_name": format_name
             }
 

@@ -58,9 +58,6 @@ def iconik_handler(req, iconik, logger, bz_shared_secret):
         logger.log("ERROR", f"Can't find configured storage: {os.environ['B2_STORAGE_ID']}")
         abort(500)
 
-    # Path within the storage
-    storage_path = os.environ.get("STORAGE_PATH", "/")
-
     # Check that context is as expected
     if request.get("context") not in ["ASSET", "COLLECTION", "BULK"]:
         logger.log("ERROR", f"Invalid context: {request.get('context')}")
@@ -71,14 +68,12 @@ def iconik_handler(req, iconik, logger, bz_shared_secret):
         # Copy files to LucidLink
         iconik.copy_files(request=request,
                           format_name=format_name,
-                          target_storage_id=working_storage["id"],
-                          path=storage_path)
+                          target_storage_id=working_storage["id"])
     elif req.path == "/remove":
         # Copy files to B2, waiting for job(s) to complete
         if iconik.copy_files(request=request,
                              format_name=format_name,
                              target_storage_id=archive_storage["id"],
-                             path=storage_path,
                              sync=True):
             # Delete files from LucidLink
             iconik.delete_files(request=request,
