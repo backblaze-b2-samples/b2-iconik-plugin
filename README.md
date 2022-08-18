@@ -1,7 +1,7 @@
 Backblaze B2 Storage Plugin for iconik
 ======================================
 
-This plugin makes it easy to manage assets when using (iconik)[https://www.iconik.io/] storage options with different price/performance/functionality. For example, you can store master copies of full resolution assets in (Backblaze B2 Cloud Storage)[https://www.backblaze.com/b2/cloud-storage.html], working on the iconik proxy files in iconik and Premiere Pro. When editing is complete, you can use the plugin to copy the masters to a [LucidLink](https://www.lucidlink.com/) Filespace for full-resolution corrections and rendering. Once the final renders are approved, you can again use the plugin to remove the copies from LucidLink, safe in the knowledge that the masters are safely archived in B2.
+This plugin makes it easy to manage assets when using [iconik](https://www.iconik.io/) storage options with different price/performance/functionality. For example, you can store master copies of full resolution assets in [Backblaze B2 Cloud Storage](https://www.backblaze.com/b2/cloud-storage.html), working on the iconik proxy files in iconik and Premiere Pro. When editing is complete, you can use the plugin to copy the masters to a [LucidLink](https://www.lucidlink.com/) Filespace for full-resolution corrections and rendering. Once the final renders are approved, you can again use the plugin to remove the copies from LucidLink, safe in the knowledge that the masters are safely archived in B2.
 
 Here's how it works:
 
