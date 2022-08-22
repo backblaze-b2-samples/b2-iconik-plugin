@@ -31,7 +31,7 @@ def test_iconik_handler_add(client):
     assert 200 == response.status_code
     assert 'OK' == response.json
 
-    assert_copy_call_counts(LL_STORAGE_ID, format_count=0)
+    assert_copy_call_counts(LL_STORAGE_ID, format_count=2)
 
 
 @responses.activate

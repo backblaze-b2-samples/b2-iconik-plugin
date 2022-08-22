@@ -72,6 +72,7 @@ def iconik_handler(req, logger, bz_shared_secret):
     if req.path == "/add":
         # Copy files to LucidLink
         iconik.copy_files(request=request,
+                          format_names=format_names,
                           target_storage_id=ll_storage["id"])
     elif req.path == "/remove":
         # Copy any original files to B2, waiting for job(s) to complete
