@@ -2,6 +2,10 @@
 # Non logging stuff
 bind = "0.0.0.0:80"
 workers = 4
+# Iconik jobs can take a long time to complete!
+timeout = 3600
+# Use asynchronous workers via gevent
+worker_class = 'gevent'
 # Access log - records incoming HTTP requests
 accesslog = "/var/log/gunicorn.access.log"
 # Error log - records Gunicorn server goings-on
