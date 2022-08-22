@@ -175,21 +175,23 @@ class Iconik:
         response = self.__delete(f"{ICONIK_FILES_API}/assets/{asset_id}/file_sets/{file_set_id}/")
         response = self.__delete(f"{ICONIK_FILES_API}/assets/{asset_id}/file_sets/{file_set_id}/purge/")
 
-    def delete_asset_files(self, asset_id, format_name, storage_id):
+    def delete_asset_files(self, asset_id, format_names, storage_id):
         """
-        Delete asset files of a given format from a storage
+        Delete asset files of given formats from a storage
         Args:
             asset_id (str): The asset id
-            format_name (str): The format name
+            format_names (list of str): The format name
             storage_id (str): The storage id
         """
-        format = self.get_format(asset_id, format_name)
-        file_sets = self.get_file_sets(asset_id, format["id"], storage_id)
-        if file_sets:
-            for file_set in file_sets:
-                self.delete_and_purge_file_set(asset_id, file_set["id"])
+        for format_name in format_names:
+            # Don't want to shadow the format built-in name
+            format_obj = self.get_format(asset_id, format_name)
+            file_sets = self.get_file_sets(asset_id, format_obj["id"], storage_id)
+            if file_sets:
+                for file_set in file_sets:
+                    self.delete_and_purge_file_set(asset_id, file_set["id"])
 
-    def delete_collection_files(self, collection_id, format_name, storage_id):
+    def delete_collection_files(self, collection_id, format_names, storage_id):
         """
         Delete asset files of a given format from a storage for the given 
         collection, and all subcollections within that collection.
@@ -200,24 +202,24 @@ class Iconik:
         """
         for object in self.get_collection_contents(collection_id):
             if object["type"] == "COLLECTION":
-                self.delete_collection_files(object["id"], format_name, storage_id)
+                self.delete_collection_files(object["id"], format_names, storage_id)
             elif object["type"] == "ASSET":
-                self.delete_asset_files(object["id"], format_name, storage_id)
+                self.delete_asset_files(object["id"], format_names, storage_id)
 
-    def delete_files(self, request, format_name, storage_id):
+    def delete_files(self, request, format_names, storage_id):
         """
         Delete files of a given format from a storage for a custom action request
         Args:
             request (dict): A request containing a list of asset ids and/or
                             a list of collection ids
-            format_name (str): The format name
+            format_names (list of str): The format name
             storage_id (str): The storage id
         """
         for asset_id in request["asset_ids"]:
-            self.delete_asset_files(asset_id, format_name, storage_id)
+            self.delete_asset_files(asset_id, format_names, storage_id)
 
         for collection_id in request["collection_ids"]:
-            self.delete_collection_files(collection_id, format_name, storage_id)
+            self.delete_collection_files(collection_id, format_names, storage_id)
 
     def job_succeeded(self, job):
         return job["status"] in SUCCESS_STATUS_LIST
@@ -225,57 +227,47 @@ class Iconik:
     def job_done(self, job):
         return job["status"] in DONE_STATUS_LIST
 
-    def copy_files(self, request, format_name, target_storage_id, sync=False):
+    def copy_files(self, request, format_names, target_storage_id, sync=False):
         """
         Copy files of a given format to a storage for a custom action request
         Args:
             request (dict): A request containing a list of asset ids and/or 
                             a list of collection ids
-            format_name (str): The format name
+            format_names (list of str): The format names
             target_storage_id (str): The target storage id
+            sync (bool):
         """
-        asset_job_id = None
-        collection_job_id = None
+        job_ids = []
 
-        if request.get("asset_ids") and len(request["asset_ids"]) > 0:
-            payload = {
-                "object_ids": request["asset_ids"],
-                "object_type": "assets",
-                "format_name": format_name
-            }
+        for format_name in format_names:
+            if request.get("asset_ids") and len(request["asset_ids"]) > 0:
+                payload = {
+                    "object_ids": request["asset_ids"],
+                    "object_type": "assets",
+                    "format_name": format_name
+                }
 
-            response = self.__post(f"{ICONIK_FILES_API}/storages/{target_storage_id}/bulk/",
-                                   json=payload)
-            asset_job_id = response.json()["job_id"]
+                response = self.__post(f"{ICONIK_FILES_API}/storages/{target_storage_id}/bulk/",
+                                       json=payload)
+                job_ids.append(response.json()["job_id"])
 
-        if request.get("collection_ids") and len(request["collection_ids"]) > 0:
-            payload = {
-                "object_ids": request["collection_ids"],
-                "object_type": "collections",
-                "format_name": format_name
-            }
+            if request.get("collection_ids") and len(request["collection_ids"]) > 0:
+                payload = {
+                    "object_ids": request["collection_ids"],
+                    "object_type": "collections",
+                    "format_name": format_name
+                }
 
-            response = self.__post(f"{ICONIK_FILES_API}/storages/{target_storage_id}/bulk/",
-                                   json=payload)
-            collection_job_id = response.json()["job_id"]
+                response = self.__post(f"{ICONIK_FILES_API}/storages/{target_storage_id}/bulk/",
+                                       json=payload)
+                job_ids.append(response.json()["job_id"])
 
         if sync:
-            if asset_job_id:
-                # Wait for assets to be copied
+            # Wait for jobs to complete
+            for job_id in job_ids:
                 while True:
                     sleep(1)
-                    response = self.__get(f"{ICONIK_JOBS_API}/jobs/{asset_job_id}/")
-                    job = response.json()
-                    if self.job_done(job):
-                        break
-                if not self.job_succeeded(job):
-                    return False
-
-            if collection_job_id:
-                # Wait for collections to be copied
-                while True:
-                    sleep(1)
-                    response = self.__get(f"{ICONIK_JOBS_API}/jobs/{collection_job_id}/")
+                    response = self.__get(f"{ICONIK_JOBS_API}/jobs/{job_id}/")
                     job = response.json()
                     if self.job_done(job):
                         break

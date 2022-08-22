@@ -61,9 +61,9 @@ Change to the plugin directory and install the required Python modules:
 
 Create a file in the plugin directory named `.env` containing your iconik token id, the shared secret you created and, optionally, the iconik format name, if it is not `ORIGINAL`.
 
-	ICONIK_ID: '<required: your iconik application token id>'
-	BZ_SHARED_SECRET = '<required: your shared secret>'
-	FORMAT_NAME: '<optional: defaults to ORIGINAL>'
+	ICONIK_ID='<required: your iconik application token id>'
+	BZ_SHARED_SECRET='<required: your shared secret>'
+	FORMAT_NAMES='<optional: defaults to ORIGINAL,PPRO_PROXY>'
 
 Open `b2-iconik-plugin.service` and edit the `User`,
 `WorkingDirectory` and `ExecStart` entries to match your system configuration.
@@ -130,7 +130,7 @@ Note - for production deployment, you should [deploy Nginx as an HTTP proxy for 
 Create the file `.env.yaml` in the project directory, with the following content:
 
 	ICONIK_ID: '<required: your iconik application token id>'
-	FORMAT_NAME: '<optional: defaults to ORIGINAL>'
+	FORMAT_NAMES: '<optional: defaults to ORIGINAL,PPRO_PROXY>'
 
 [Create the following secret](https://cloud.google.com/secret-manager/docs/creating-and-accessing-secrets#create) in Google Secret Manager:
 

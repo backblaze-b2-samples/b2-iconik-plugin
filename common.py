@@ -45,8 +45,8 @@ def iconik_handler(req, logger, bz_shared_secret):
         logger.log("ERROR", f"Invalid JSON body: {req.get_data(as_text=True)}")
         abort(400)
 
-    # The format that we're going to copy
-    format_name = os.environ.get("FORMAT_NAME", "ORIGINAL")
+    # The formats that we're going to copy
+    format_names = os.environ.get("FORMAT_NAMES", "ORIGINAL,PPRO_PROXY").split(',')
 
     # Create an iconic API client
     iconik = Iconik(os.environ['ICONIK_ID'], request.get("auth_token"))
@@ -72,17 +72,17 @@ def iconik_handler(req, logger, bz_shared_secret):
     if req.path == "/add":
         # Copy files to LucidLink
         iconik.copy_files(request=request,
-                          format_name=format_name,
+                          format_names=format_names,
                           target_storage_id=working_storage["id"])
     elif req.path == "/remove":
         # Copy files to B2, waiting for job(s) to complete
         if iconik.copy_files(request=request,
-                             format_name=format_name,
+                             format_names=format_names,
                              target_storage_id=archive_storage["id"],
                              sync=True):
             # Delete files from LucidLink
             iconik.delete_files(request=request,
-                                format_name=format_name,
+                                format_names=format_names,
                                 storage_id=working_storage["id"])
     else:
         logger.log("ERROR", f"Invalid path: {req.path}")
