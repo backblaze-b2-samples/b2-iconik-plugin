@@ -75,9 +75,9 @@ def iconik_handler(req, logger, bz_shared_secret):
                           format_names=format_names,
                           target_storage_id=ll_storage["id"])
     elif req.path == "/remove":
-        # Copy files to B2, waiting for job(s) to complete
+        # Copy any original files to B2, waiting for job(s) to complete
         if iconik.copy_files(request=request,
-                             format_names=format_names,
+                             format_names=[format_names[0]],
                              target_storage_id=b2_storage["id"],
                              sync=True):
             # Delete files from LucidLink
