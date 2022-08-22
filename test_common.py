@@ -58,6 +58,10 @@ PAYLOAD = {
 def assert_copy_call_counts(storage_id, format_count):
     # There should be two calls to bulk copy per format - one for the asset and one
     # for the collection
+
+    # When specifying zero formats there is still one call
+    format_count = 1 if format_count == 0 else format_count
+
     assert responses.assert_call_count(
         f'{iconik.ICONIK_FILES_API}/storages/{storage_id}/bulk/',
         2 * format_count

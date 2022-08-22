@@ -48,7 +48,7 @@ def test_iconik_handler_add(app, logger):
         assert 200 == response.status_code
         assert 'OK' == response.get_data(as_text=True)
 
-        assert_copy_call_counts(LL_STORAGE_ID, format_count=2)
+        assert_copy_call_counts(LL_STORAGE_ID, format_count=0)
 
 
 @responses.activate

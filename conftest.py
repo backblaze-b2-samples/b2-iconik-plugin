@@ -104,7 +104,6 @@ def setup_iconik_responses():
 
     # Get formats
     for format_name, format_id in FORMATS.items():
-        print("$$$", format_name, format_id)
         responses.add(
             method=responses.GET,
             url=f'{iconik.ICONIK_FILES_API}/assets/{ASSET_ID}/formats/{format_name}/',

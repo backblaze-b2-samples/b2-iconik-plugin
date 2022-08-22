@@ -231,41 +231,38 @@ class Iconik:
     def job_done(self, job):
         return job["status"] in DONE_STATUS_LIST
 
-    def copy_files(self, request, format_names, target_storage_id, sync=False):
+    def _copy_files(self, object_type, request, target_storage_id, format_name=None):
+        id_list = f'{object_type}_ids'
+        if request.get(id_list) and len(request[id_list]) > 0:
+            payload = {
+                "object_ids": request[id_list],
+                "object_type": f"{object_type}s",
+            }
+            if format_name:
+                payload["format_name"] = format_name
+            return self.__post(f"{ICONIK_FILES_API}/storages/{target_storage_id}/bulk/",
+                               json=payload).json()
+
+    def copy_files(self, request, target_storage_id, format_names=None, sync=False):
         """
         Copy files of a given format to a storage for a custom action request
         Args:
             request (dict): A request containing a list of asset ids and/or 
                             a list of collection ids
-            format_names (list of str): The format names
+            format_names (list of str): The format names. If None, copy all formats
             target_storage_id (str): The target storage id
             sync (bool):
         """
         job_ids = []
 
-        for format_name in format_names:
-            if request.get("asset_ids") and len(request["asset_ids"]) > 0:
-                payload = {
-                    "object_ids": request["asset_ids"],
-                    "object_type": "assets",
-                    "format_name": format_name
-                }
-                print("@@@", target_storage_id)
-                response = self.__post(f"{ICONIK_FILES_API}/storages/{target_storage_id}/bulk/",
-                                       json=payload)
-                job_ids.append(response.json()["job_id"])
-
-            if request.get("collection_ids") and len(request["collection_ids"]) > 0:
-                payload = {
-                    "object_ids": request["collection_ids"],
-                    "object_type": "collections",
-                    "format_name": format_name
-                }
-
-                print("@@@", target_storage_id)
-                response = self.__post(f"{ICONIK_FILES_API}/storages/{target_storage_id}/bulk/",
-                                       json=payload)
-                job_ids.append(response.json()["job_id"])
+        for object_type in ['asset', 'collection']:
+            if format_names:
+                for format_name in format_names:
+                    response = self._copy_files(object_type, request, target_storage_id, format_name)
+                    job_ids.append(response["job_id"])
+            else:
+                response = self._copy_files(object_type, request, target_storage_id)
+                job_ids.append(response["job_id"])
 
         if sync:
             # Wait for jobs to complete
