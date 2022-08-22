@@ -242,6 +242,8 @@ class Iconik:
                 payload["format_name"] = format_name
             return self.__post(f"{ICONIK_FILES_API}/storages/{target_storage_id}/bulk/",
                                json=payload).json()
+        else:
+            return None
 
     def copy_files(self, request, target_storage_id, format_names=None, sync=False):
         """
@@ -259,10 +261,12 @@ class Iconik:
             if format_names:
                 for format_name in format_names:
                     response = self._copy_files(object_type, request, target_storage_id, format_name)
-                    job_ids.append(response["job_id"])
+                    if response:
+                        job_ids.append(response["job_id"])
             else:
                 response = self._copy_files(object_type, request, target_storage_id)
-                job_ids.append(response["job_id"])
+                if response:
+                    job_ids.append(response["job_id"])
 
         if sync:
             # Wait for jobs to complete
