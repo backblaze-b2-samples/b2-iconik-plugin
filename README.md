@@ -59,13 +59,11 @@ Change to the plugin directory and install the required Python modules:
 	cd b2-iconik-plugin
 	pip install -r requirements.txt
 
-Create a file in the plugin directory named `.env` containing your iconik token name and value, your storage IDs and the shared secret you created.
+Create a file in the plugin directory named `.env` containing your iconik token id, the shared secret you created and, optionally, the iconik format name, if it is not `ORIGINAL`.
 
 	ICONIK_ID: '<required: your iconik application token id>'
-	FORMAT_NAME: '<optional: defaults to ORIGINAL>'
-	LL_STORAGE_ID = '<required: your LucidLink / ISG storage ID>'
-	B2_STORAGE_ID = '<required: your B2 storage ID>'
 	BZ_SHARED_SECRET = '<required: your shared secret>'
+	FORMAT_NAME: '<optional: defaults to ORIGINAL>'
 
 Open `b2-iconik-plugin.service` and edit the `User`,
 `WorkingDirectory` and `ExecStart` entries to match your system configuration.
@@ -102,7 +100,7 @@ You should see output similar to this:
 	Aug 16 19:06:36 vultr gunicorn[743403]: [2022-08-16 19:06:36 +0000] [743403] [INFO] Booting worker with pid: 743403
 	Aug 16 19:06:36 vultr gunicorn[743404]: [2022-08-16 19:06:36 +0000] [743404] [INFO] Booting worker with pid: 743404
 
-Your plugin's endpoint comprises the instance's public IP address or hostname plus the Gunicorn port number. For example, if your plugin is running at 1.2.3.4 and you left the Gunicorn port as the default 8000, your plugin endpoint is `http://1.2.3.4:8000/`
+Your plugin's endpoint comprises the instance's public IP address or hostname plus the Gunicorn port number. For example, if your plugin is running at 1.2.3.4, and you left the Gunicorn port as the default 8000, your plugin endpoint is `http://1.2.3.4:8000/`
 
 You can test connectivity to the plugin by opening `http://1.2.3.4:8000/add` in a browser. You should see an error response similar to:
 
@@ -133,8 +131,6 @@ Create the file `.env.yaml` in the project directory, with the following content
 
 	ICONIK_ID: '<required: your iconik application token id>'
 	FORMAT_NAME: '<optional: defaults to ORIGINAL>'
-	LL_STORAGE_ID: '<required: target iconik storage for LucidLink>'
-	B2_STORAGE_ID: '<required: target iconik storage for LucidLink>'
 
 [Create the following secret](https://cloud.google.com/secret-manager/docs/creating-and-accessing-secrets#create) in Google Secret Manager:
 
@@ -170,12 +166,12 @@ Create iconik Custom Actions
 
 Run the included `create_custom_actions.py` script with the endpoint of the plugin as an argument:
 
-	ICONIK_TOKEN =  '<your iconik application token value>' \
+	ICONIK_TOKEN = '<your iconik application token value>' \
 	python create_custom_actions.py <your plugin endpoint>
 
 You can delete the custom actions, if necessary, with:
 
-	ICONIK_TOKEN =  '<your iconik application token value>' \
+	ICONIK_TOKEN = '<your iconik application token value>' \
 	python delete_custom_actions.py <your plugin endpoint>
 
 Test the Integration

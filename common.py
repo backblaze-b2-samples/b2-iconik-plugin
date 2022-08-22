@@ -52,15 +52,15 @@ def iconik_handler(req, logger, bz_shared_secret):
     iconik = Iconik(os.environ['ICONIK_ID'], request.get("auth_token"))
 
     # The working storage
-    working_storage = iconik.get_storage(id=os.environ["LL_STORAGE_ID"])
+    working_storage = iconik.get_storage(id=req.args.get('ll_storage_id'))
     if not working_storage:
-        logger.log("ERROR", f"Can't find configured storage: {os.environ['LL_STORAGE_ID']}")
+        logger.log("ERROR", f"Can't find configured storage: {req.args.get('ll_storage_id')}")
         abort(500)
 
     # The archive storage
-    archive_storage = iconik.get_storage(id=os.environ["B2_STORAGE_ID"])
+    archive_storage = iconik.get_storage(id=req.args.get("b2_storage_id"))
     if not archive_storage:
-        logger.log("ERROR", f"Can't find configured storage: {os.environ['B2_STORAGE_ID']}")
+        logger.log("ERROR", f"Can't find configured storage: {req.args.get('b2_storage_id')}")
         abort(500)
 
     # Check that context is as expected

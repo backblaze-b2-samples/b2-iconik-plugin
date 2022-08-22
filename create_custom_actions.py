@@ -32,21 +32,32 @@ def main():
     load_dotenv()
 
     parser = argparse.ArgumentParser(
-        description="Add custom actions to iconik for your Google Cloud function"
+        description="Add custom actions to iconik for the plugin"
     )
-    parser.add_argument("endpoint", type=str,
+    parser.add_argument("--endpoint", type=str, nargs=1,
                         help="your function's endpoint url")
+    parser.add_argument("--b2_storage_id", type=str, nargs='+',
+                        help="the ID of the B2 storage in iconik")
+    parser.add_argument("--ll_storage_id", type=str, nargs='+',
+                        help="the ID of the LucidLink storage in iconik")
     args = parser.parse_args()
 
-    iconik = Iconik(os.environ["ICONIK_ID"], os.environ["ICONIK_TOKEN"])
+    if not args.endpoint or not args.b2_storage_id or not args.ll_storage_id:
+        parser.print_usage()
+        parser.exit(1)
 
-    endpoint = args.endpoint
+    query_params = f"?b2_storage_id={args.b2_storage_id[0]}" if len(args.b2_storage_id) == 1 else ""
+    if len(args.ll_storage_id) == 1:
+        query_params += "&" if len(query_params) > 0 else "?"
+        query_params += f"ll_storage_id={args.ll_storage_id[0]}"
+
+    iconik = Iconik(os.environ["ICONIK_ID"], os.environ["ICONIK_TOKEN"])
 
     for operation in OPERATIONS:
         for context in CONTEXTS:
             iconik.add_action(context,
                               os.environ["ICONIK_ID"],
-                              urljoin(endpoint, operation["path"]),
+                              urljoin(args.endpoint[0], operation["path"]) + query_params,
                               operation["title"],
                               os.environ["BZ_SHARED_SECRET"])
 

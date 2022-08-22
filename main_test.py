@@ -38,7 +38,7 @@ def setup_secrets(request):
 @responses.activate
 def test_iconik_handler_add(app, logger):
     with app.test_request_context(
-            path='/add',
+            path=f'/add?b2_storage_id={B2_STORAGE_ID}&ll_storage_id={LL_STORAGE_ID}',
             method='POST',
             json=PAYLOAD,
             headers={X_BZ_SHARED_SECRET: SHARED_SECRET}):
@@ -59,7 +59,7 @@ def test_iconik_handler_add(app, logger):
 @responses.activate
 def test_iconik_handler_remove(app, logger):
     with app.test_request_context(
-            path='/remove',
+            path=f'/remove?b2_storage_id={B2_STORAGE_ID}&ll_storage_id={LL_STORAGE_ID}',
             method='POST',
             json=PAYLOAD,
             headers={X_BZ_SHARED_SECRET: SHARED_SECRET}):
@@ -91,7 +91,7 @@ def test_iconik_handler_remove(app, logger):
 @responses.activate
 def test_iconik_handler_400_invalid_content(app, logger):
     with app.test_request_context(
-            path='/add', 
+            path=f'/add?b2_storage_id={B2_STORAGE_ID}&ll_storage_id={LL_STORAGE_ID}',
             method='POST',
             data='This is not JSON!',
             headers={X_BZ_SHARED_SECRET: SHARED_SECRET}):
@@ -103,7 +103,7 @@ def test_iconik_handler_400_invalid_content(app, logger):
 @responses.activate
 def test_iconik_handler_400_missing_content(app, logger):
     with app.test_request_context(
-            path='/add', 
+            path=f'/add?b2_storage_id={B2_STORAGE_ID}&ll_storage_id={LL_STORAGE_ID}',
             method='POST',
             headers={X_BZ_SHARED_SECRET: SHARED_SECRET}):
         with pytest.raises(HTTPException) as httperror:
@@ -116,7 +116,7 @@ def test_iconik_handler_400_invalid_context(app, logger):
     json = dict(PAYLOAD)
     json["context"] = "INVALID"
     with app.test_request_context(
-            path='/add', 
+            path=f'/add?b2_storage_id={B2_STORAGE_ID}&ll_storage_id={LL_STORAGE_ID}',
             method='POST',
             json=json,
             headers={X_BZ_SHARED_SECRET: SHARED_SECRET}):
@@ -130,7 +130,7 @@ def test_iconik_handler_400_missing_context(app, logger):
     json = dict(PAYLOAD)
     del json["context"]
     with app.test_request_context(
-            path='/add', 
+            path=f'/add?b2_storage_id={B2_STORAGE_ID}&ll_storage_id={LL_STORAGE_ID}',
             method='POST',
             json=json,
             headers={X_BZ_SHARED_SECRET: SHARED_SECRET}):
@@ -142,7 +142,7 @@ def test_iconik_handler_400_missing_context(app, logger):
 @responses.activate
 def test_iconik_handler_401_invalid(app, logger):
     with app.test_request_context(
-            path='/add', 
+            path=f'/add?b2_storage_id={B2_STORAGE_ID}&ll_storage_id={LL_STORAGE_ID}',
             method='POST',
             json=PAYLOAD,
             headers={X_BZ_SHARED_SECRET: 'dummy'}):
@@ -154,7 +154,7 @@ def test_iconik_handler_401_invalid(app, logger):
 @responses.activate
 def test_iconik_handler_401_missing(app, logger):
     with app.test_request_context(
-            path='/add', 
+            path=f'/add?b2_storage_id={B2_STORAGE_ID}&ll_storage_id={LL_STORAGE_ID}',
             method='POST',
             json=PAYLOAD):
         with pytest.raises(HTTPException) as httperror:
@@ -165,7 +165,7 @@ def test_iconik_handler_401_missing(app, logger):
 @responses.activate
 def test_iconik_handler_404(app, logger):
     with app.test_request_context(
-            path='/invalid', 
+            path=f'/invalid?b2_storage_id={B2_STORAGE_ID}&ll_storage_id={LL_STORAGE_ID}',
             method='POST',
             json=PAYLOAD,
             headers={X_BZ_SHARED_SECRET: SHARED_SECRET}):
@@ -177,7 +177,7 @@ def test_iconik_handler_404(app, logger):
 @responses.activate
 def test_iconik_handler_405(app, logger):
     with app.test_request_context(
-            path='/add', 
+            path=f'/add?b2_storage_id={B2_STORAGE_ID}&ll_storage_id={LL_STORAGE_ID}',
             method='GET', 
             headers={X_BZ_SHARED_SECRET: SHARED_SECRET}):
         with pytest.raises(HTTPException) as httperror:
@@ -186,12 +186,11 @@ def test_iconik_handler_405(app, logger):
 
 @responses.activate
 def test_iconik_handler_500(app, logger):
-    with patch.dict(os.environ, {"LL_STORAGE_ID": INVALID_STORAGE_ID}):
-        with app.test_request_context(
-                path='/add',
-                method='POST',
-                json=PAYLOAD,
-                headers={X_BZ_SHARED_SECRET: SHARED_SECRET}):
-            with pytest.raises(HTTPException) as httperror:
-                response = gcp_iconik_handler(flask.request)
-            assert 500 == httperror.value.code
+    with app.test_request_context(
+            path=f'/add?b2_storage_id={B2_STORAGE_ID}&ll_storage_id={INVALID_STORAGE_ID}',
+            method='POST',
+            json=PAYLOAD,
+            headers={X_BZ_SHARED_SECRET: SHARED_SECRET}):
+        with pytest.raises(HTTPException) as httperror:
+            response = gcp_iconik_handler(flask.request)
+        assert 500 == httperror.value.code

@@ -10,8 +10,6 @@ from responses import matchers
 def pytest_generate_tests(metafunc):
     os.environ["ICONIK_ID"] = APP_ID
     os.environ["FORMAT_NAME"] = "ORIGINAL"
-    os.environ["LL_STORAGE_ID"] = LL_STORAGE_ID
-    os.environ["B2_STORAGE_ID"] = B2_STORAGE_ID
 
 
 # Set up all the iconik API responses we'll need
@@ -90,7 +88,7 @@ def setup_iconik_responses():
         url=f'{iconik.ICONIK_FILES_API}/storages/{LL_STORAGE_ID}/bulk/',
         json={
           'job_id': JOB_ID,
-          'success': f'Queued copying of file sets to storage {os.environ["LL_STORAGE_ID"]}'
+          'success': f'Queued copying of file sets to storage {LL_STORAGE_ID}'
         }, 
         status=200
     )
@@ -99,7 +97,7 @@ def setup_iconik_responses():
         url=f'{iconik.ICONIK_FILES_API}/storages/{B2_STORAGE_ID}/bulk/',
         json={
             'job_id': JOB_ID,
-            'success': f'Queued copying of file sets to storage {os.environ["B2_STORAGE_ID"]}'
+            'success': f'Queued copying of file sets to storage {B2_STORAGE_ID}'
         },
         status=200
     )
