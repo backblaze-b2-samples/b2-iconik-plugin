@@ -77,3 +77,7 @@ pytype_output/
 
 # Configuration
 .env*
+
+# Certificate and key for Gunicorn
+server.crt
+server.key
