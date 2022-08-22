@@ -149,7 +149,10 @@ class Iconik:
         Returns:
             A format
         """
-        response = self.__get(f"{ICONIK_FILES_API}/assets/{asset_id}/formats/{name}/")
+        response = self.__get(f"{ICONIK_FILES_API}/assets/{asset_id}/formats/{name}/", raise_for_status=False)
+        if response.status_code == 404:
+            return None
+        response.raise_for_status()
         return response.json()
 
     def get_file_sets(self, asset_id, format_id, storage_id):
@@ -177,7 +180,7 @@ class Iconik:
 
     def delete_asset_files(self, asset_id, format_names, storage_id):
         """
-        Delete asset files of given formats from a storage
+        Delete asset files of given formats from a storage, if they exist
         Args:
             asset_id (str): The asset id
             format_names (list of str): The format name
@@ -186,10 +189,11 @@ class Iconik:
         for format_name in format_names:
             # Don't want to shadow the format built-in name
             format_obj = self.get_format(asset_id, format_name)
-            file_sets = self.get_file_sets(asset_id, format_obj["id"], storage_id)
-            if file_sets:
-                for file_set in file_sets:
-                    self.delete_and_purge_file_set(asset_id, file_set["id"])
+            if format_obj:
+                file_sets = self.get_file_sets(asset_id, format_obj["id"], storage_id)
+                if file_sets:
+                    for file_set in file_sets:
+                        self.delete_and_purge_file_set(asset_id, file_set["id"])
 
     def delete_collection_files(self, collection_id, format_names, storage_id):
         """
