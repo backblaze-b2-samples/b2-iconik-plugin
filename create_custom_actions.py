@@ -55,10 +55,12 @@ def main():
 
     for operation in OPERATIONS:
         for context in CONTEXTS:
+            title = operation["title"]
+            print(f"Creating '{title}' action for '{context}'")
             iconik.add_action(context,
                               os.environ["ICONIK_ID"],
                               urljoin(args.endpoint[0], operation["path"]) + query_params,
-                              operation["title"],
+                              title,
                               os.environ["BZ_SHARED_SECRET"])
 
 

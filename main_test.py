@@ -7,7 +7,7 @@ import requests
 from responses import matchers
 from unittest.mock import patch, Mock
 from werkzeug.exceptions import HTTPException
-from test_constants import *
+from test_common import *
 from gcp_test import get_smsc_mock, setup_gcp_responses, GCF_PROJECT_ID
 from common import X_BZ_SHARED_SECRET
 
@@ -48,12 +48,7 @@ def test_iconik_handler_add(app, logger):
         assert 200 == response.status_code
         assert 'OK' == response.get_data(as_text=True)
 
-        # There should be two calls to bulk copy - one for the asset and one
-        # for the collection
-        assert responses.assert_call_count(
-            f'{iconik.ICONIK_FILES_API}/storages/{LL_STORAGE_ID}/bulk/',
-            2
-        )
+        assert_copy_call_counts(LL_STORAGE_ID)
 
 
 @responses.activate
@@ -69,23 +64,8 @@ def test_iconik_handler_remove(app, logger):
         assert 200 == response.status_code
         assert 'OK' == response.get_data(as_text=True)
 
-        # There should be two calls to bulk copy - one for the asset and one
-        # for the collection
-        assert responses.assert_call_count(
-            f'{iconik.ICONIK_FILES_API}/storages/{B2_STORAGE_ID}/bulk/',
-            2
-        )
-
-        # The asset should be deleted and purged twice - once directly
-        # and once via the subcollection
-        assert responses.assert_call_count(
-            f'{iconik.ICONIK_FILES_API}/assets/{ASSET_ID}/file_sets/{FILE_SET_ID}/', 
-            2
-        )
-        assert responses.assert_call_count(
-            f'{iconik.ICONIK_FILES_API}/assets/{ASSET_ID}/file_sets/{FILE_SET_ID}/purge/', 
-            2
-        )
+        assert_copy_call_counts(B2_STORAGE_ID)
+        assert_delete_call_counts()
 
 
 @responses.activate

@@ -3,7 +3,7 @@ import pytest
 import requests
 import responses
 
-from test_constants import *
+from test_common import *
 
 def test_iconik_app_id_none():
     with pytest.raises(ValueError) as value_error:

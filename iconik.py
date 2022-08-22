@@ -197,7 +197,7 @@ class Iconik:
         collection, and all subcollections within that collection.
         Args:
             collection_id (str): The collection id
-            format_name (str): The format name
+            format_names (list of str): The format name
             storage_id (str): The storage id
         """
         for object in self.get_collection_contents(collection_id):
@@ -246,7 +246,7 @@ class Iconik:
                     "object_type": "assets",
                     "format_name": format_name
                 }
-
+                print("@@@", target_storage_id)
                 response = self.__post(f"{ICONIK_FILES_API}/storages/{target_storage_id}/bulk/",
                                        json=payload)
                 job_ids.append(response.json()["job_id"])
@@ -258,6 +258,7 @@ class Iconik:
                     "format_name": format_name
                 }
 
+                print("@@@", target_storage_id)
                 response = self.__post(f"{ICONIK_FILES_API}/storages/{target_storage_id}/bulk/",
                                        json=payload)
                 job_ids.append(response.json()["job_id"])
@@ -292,7 +293,6 @@ class Iconik:
             },
             "app_id": app_id
         }
-        print(f"Creating '{title}' action for '{context}'")
         response = self.__post(
             f"{ICONIK_ASSETS_API}/custom_actions/{context}/",
             json=action

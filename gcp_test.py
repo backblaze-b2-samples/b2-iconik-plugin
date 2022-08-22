@@ -3,7 +3,7 @@ import pytest
 import re
 import responses
 from unittest.mock import patch, Mock
-from test_constants import *
+from test_common import *
 
 import gcp
 

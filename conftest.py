@@ -3,13 +3,13 @@ import os
 import pytest
 import responses
 
-from test_constants import *
+from test_common import *
 from responses import matchers
 
 
 def pytest_generate_tests(metafunc):
     os.environ["ICONIK_ID"] = APP_ID
-    os.environ["FORMAT_NAME"] = "ORIGINAL"
+    os.environ["FORMAT_NAMES"] = ",".join(FORMATS.keys())
 
 
 # Set up all the iconik API responses we'll need
@@ -102,33 +102,54 @@ def setup_iconik_responses():
         status=200
     )
 
-    # Get format
-    responses.add(
-        method=responses.GET,
-        url=f'{iconik.ICONIK_FILES_API}/assets/{ASSET_ID}/formats/{os.environ["FORMAT_NAME"]}/', 
-        json={"id": FORMAT_ID}, 
-        status=200
-    )
+    # Get formats
+    for format_name, format_id in FORMATS.items():
+        print("$$$", format_name, format_id)
+        responses.add(
+            method=responses.GET,
+            url=f'{iconik.ICONIK_FILES_API}/assets/{ASSET_ID}/formats/{format_name}/',
+            json={"id": format_id},
+            status=200
+        )
 
     # Get file sets
     responses.add(
         method=responses.GET,
-        url=f'{iconik.ICONIK_FILES_API}/assets/{ASSET_ID}/formats/{FORMAT_ID}/storages/{LL_STORAGE_ID}/file_sets/',
-        json={"objects": [{"id": FILE_SET_ID}]}, 
+        url=f'{iconik.ICONIK_FILES_API}/assets/{ASSET_ID}/formats/{ORIGINAL_FORMAT_ID}/storages/{LL_STORAGE_ID}/file_sets/',
+        json={"objects": [{"id": ORIGINAL_FILE_SET_ID}]},
         status=200
     )
 
-    # Delete file set
     responses.add(
-        method=responses.DELETE,
-        url=f'{iconik.ICONIK_FILES_API}/assets/{ASSET_ID}/file_sets/{FILE_SET_ID}/', 
+        method=responses.GET,
+        url=f'{iconik.ICONIK_FILES_API}/assets/{ASSET_ID}/formats/{PPRO_PROXY_FORMAT_ID}/storages/{LL_STORAGE_ID}/file_sets/',
+        json={"objects": [{"id": PPRO_PROXY_FILE_SET_ID}]},
         status=200
     )
 
-    # Purge file set
+    # Delete file sets
     responses.add(
         method=responses.DELETE,
-        url=f'{iconik.ICONIK_FILES_API}/assets/{ASSET_ID}/file_sets/{FILE_SET_ID}/purge/', 
+        url=f'{iconik.ICONIK_FILES_API}/assets/{ASSET_ID}/file_sets/{ORIGINAL_FILE_SET_ID}/',
+        status=200
+    )
+
+    responses.add(
+        method=responses.DELETE,
+        url=f'{iconik.ICONIK_FILES_API}/assets/{ASSET_ID}/file_sets/{PPRO_PROXY_FILE_SET_ID}/',
+        status=200
+    )
+
+    # Purge file sets
+    responses.add(
+        method=responses.DELETE,
+        url=f'{iconik.ICONIK_FILES_API}/assets/{ASSET_ID}/file_sets/{ORIGINAL_FILE_SET_ID}/purge/',
+        status=200
+    )
+
+    responses.add(
+        method=responses.DELETE,
+        url=f'{iconik.ICONIK_FILES_API}/assets/{ASSET_ID}/file_sets/{PPRO_PROXY_FILE_SET_ID}/purge/',
         status=200
     )
 

@@ -51,15 +51,15 @@ def iconik_handler(req, logger, bz_shared_secret):
     # Create an iconic API client
     iconik = Iconik(os.environ['ICONIK_ID'], request.get("auth_token"))
 
-    # The working storage
-    working_storage = iconik.get_storage(id=req.args.get('ll_storage_id'))
-    if not working_storage:
+    # The LucidLink storage
+    ll_storage = iconik.get_storage(id=req.args.get('ll_storage_id'))
+    if not ll_storage:
         logger.log("ERROR", f"Can't find configured storage: {req.args.get('ll_storage_id')}")
         abort(500)
 
-    # The archive storage
-    archive_storage = iconik.get_storage(id=req.args.get("b2_storage_id"))
-    if not archive_storage:
+    # The B2 storage
+    b2_storage = iconik.get_storage(id=req.args.get("b2_storage_id"))
+    if not b2_storage:
         logger.log("ERROR", f"Can't find configured storage: {req.args.get('b2_storage_id')}")
         abort(500)
 
@@ -73,17 +73,17 @@ def iconik_handler(req, logger, bz_shared_secret):
         # Copy files to LucidLink
         iconik.copy_files(request=request,
                           format_names=format_names,
-                          target_storage_id=working_storage["id"])
+                          target_storage_id=ll_storage["id"])
     elif req.path == "/remove":
         # Copy files to B2, waiting for job(s) to complete
         if iconik.copy_files(request=request,
                              format_names=format_names,
-                             target_storage_id=archive_storage["id"],
+                             target_storage_id=b2_storage["id"],
                              sync=True):
             # Delete files from LucidLink
             iconik.delete_files(request=request,
                                 format_names=format_names,
-                                storage_id=working_storage["id"])
+                                storage_id=ll_storage["id"])
     else:
         logger.log("ERROR", f"Invalid path: {req.path}")
         abort(404)
