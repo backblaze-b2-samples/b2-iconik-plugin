@@ -250,7 +250,6 @@ class Iconik:
                     "object_type": "assets",
                     "format_name": format_name
                 }
-                print("@@@", target_storage_id)
                 response = self.__post(f"{ICONIK_FILES_API}/storages/{target_storage_id}/bulk/",
                                        json=payload)
                 job_ids.append(response.json()["job_id"])
@@ -262,7 +261,6 @@ class Iconik:
                     "format_name": format_name
                 }
 
-                print("@@@", target_storage_id)
                 response = self.__post(f"{ICONIK_FILES_API}/storages/{target_storage_id}/bulk/",
                                        json=payload)
                 job_ids.append(response.json()["job_id"])
