@@ -52,13 +52,13 @@ def iconik_handler(req, logger, bz_shared_secret):
     iconik = Iconik(os.environ['ICONIK_ID'], request.get("auth_token"))
 
     # The LucidLink storage
-    ll_storage = iconik.get_storage(id=req.args.get('ll_storage_id'))
+    ll_storage = iconik.get_storage(id_=req.args.get('ll_storage_id'))
     if not ll_storage:
         logger.log("ERROR", f"Can't find configured storage: {req.args.get('ll_storage_id')}")
         abort(500)
 
     # The B2 storage
-    b2_storage = iconik.get_storage(id=req.args.get("b2_storage_id"))
+    b2_storage = iconik.get_storage(id_=req.args.get("b2_storage_id"))
     if not b2_storage:
         logger.log("ERROR", f"Can't find configured storage: {req.args.get('b2_storage_id')}")
         abort(500)

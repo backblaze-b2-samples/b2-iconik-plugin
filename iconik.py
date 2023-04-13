@@ -3,6 +3,9 @@ from time import sleep
 
 from logger import Logger
 
+ASSET_OBJECT_TYPE = "assets"
+COLLECTION_OBJECT_TYPE = "collections"
+
 ICONIK_API_BASE = "https://app.iconik.io"
 ICONIK_ASSETS_API = ICONIK_API_BASE + "/API/assets/v1"
 ICONIK_FILES_API = ICONIK_API_BASE + "/API/files/v1"
@@ -76,6 +79,7 @@ class Iconik:
         GETs next_url from the response until it is empty.
         Args:
             first_url (str): The initial URL to GET
+            params: Parameters to pass down to the underlying get()
         Returns:
             A list of objects
         """
@@ -91,19 +95,19 @@ class Iconik:
 
         return objects
 
-    def get_storage(self, id=None, name=None):
+    def get_storage(self, id_=None, name=None):
         """
         Get a storage from its name or id. Note - if there are multiple storages
         with the same name, this function returns the first one returned
         by iconik
         Args:
             name (str): The name of a storage
-            id (str): The id of a storage
+            id_ (str): The id of a storage
         Returns:
             A storage
         """
-        if id:
-            url = f"{ICONIK_FILES_API}/storages/{id}/"
+        if id_:
+            url = f"{ICONIK_FILES_API}/storages/{id_}/"
             params = None
         else:
             url = f"{ICONIK_FILES_API}/storages/"
@@ -119,30 +123,34 @@ class Iconik:
         else:
             return None
 
-    def get_collection(self, id):
+    def get_collection(self, id_):
         """
         Get a collection from its id
         Args:
-            id (str): The collection id
+            id_ (str): The collection id
         Returns:
             A collection
         """
-        response = self.__get(f"{ICONIK_ASSETS_API}/collections/{id}")
+        response = self.__get(f"{ICONIK_ASSETS_API}/collections/{id_}")
         return response.json()
 
-    def get_collection_contents(self, id):
+    def get_collection_contents(self, id_, object_types):
         """
         Get the contents of a collection from its id
         Args:
-            id (str): The collection id
+            id_ (str): The collection id
+            object_types (list of str): Optional list of object types to return
         Returns:
             A list of objects
         """
-        return self.get_objects(f"{ICONIK_ASSETS_API}/collections/{id}/contents/")
+        url = f"{ICONIK_ASSETS_API}/collections/{id_}/contents/"
+        if object_types:
+            url += f"?object_types={','.join(object_types)}"
+        return self.get_objects(url)
 
     def get_format(self, asset_id, name):
         """
-        Get an asset"s format from its name
+        Get an asset's format from its name
         Args:
             asset_id (str): The asset id
             name (str): The name of a format
@@ -175,8 +183,8 @@ class Iconik:
             asset_id (str): The asset id
             file_set_id (str): The file set id
         """
-        response = self.__delete(f"{ICONIK_FILES_API}/assets/{asset_id}/file_sets/{file_set_id}/")
-        response = self.__delete(f"{ICONIK_FILES_API}/assets/{asset_id}/file_sets/{file_set_id}/purge/")
+        self.__delete(f"{ICONIK_FILES_API}/assets/{asset_id}/file_sets/{file_set_id}/")
+        self.__delete(f"{ICONIK_FILES_API}/assets/{asset_id}/file_sets/{file_set_id}/purge/")
 
     def delete_asset_files(self, asset_id, format_names, storage_id):
         """
@@ -197,18 +205,18 @@ class Iconik:
 
     def delete_collection_files(self, collection_id, format_names, storage_id):
         """
-        Delete asset files of a given format from a storage for the given 
+        Delete asset files of a given format from a storage for the given
         collection, and all subcollections within that collection.
         Args:
             collection_id (str): The collection id
             format_names (list of str): The format name
             storage_id (str): The storage id
         """
-        for object in self.get_collection_contents(collection_id):
-            if object["type"] == "COLLECTION":
-                self.delete_collection_files(object["id"], format_names, storage_id)
-            elif object["type"] == "ASSET":
-                self.delete_asset_files(object["id"], format_names, storage_id)
+        for obj in self.get_collection_contents(collection_id, [COLLECTION_OBJECT_TYPE, ASSET_OBJECT_TYPE]):
+            if obj["object_type"] == COLLECTION_OBJECT_TYPE:
+                self.delete_collection_files(obj["id"], format_names, storage_id)
+            elif obj["object_type"] == ASSET_OBJECT_TYPE:
+                self.delete_asset_files(obj["id"], format_names, storage_id)
 
     def delete_files(self, request, format_names, storage_id):
         """
@@ -225,17 +233,19 @@ class Iconik:
         for collection_id in request["collection_ids"]:
             self.delete_collection_files(collection_id, format_names, storage_id)
 
-    def job_succeeded(self, job):
+    @staticmethod
+    def job_succeeded(job):
         return job["status"] in SUCCESS_STATUS_LIST
 
-    def job_done(self, job):
+    @staticmethod
+    def job_done(job):
         return job["status"] in DONE_STATUS_LIST
 
     def copy_files(self, request, format_names, target_storage_id, sync=False):
         """
         Copy files of a given format to a storage for a custom action request
         Args:
-            request (dict): A request containing a list of asset ids and/or 
+            request (dict): A request containing a list of asset ids and/or
                             a list of collection ids
             format_names (list of str): The format names
             target_storage_id (str): The target storage id
@@ -243,6 +253,7 @@ class Iconik:
         """
         job_ids = []
 
+        # TODO - see if we can exclude non-existent asset/format combinations
         for format_name in format_names:
             if request.get("asset_ids") and len(request["asset_ids"]) > 0:
                 payload = {
@@ -280,7 +291,7 @@ class Iconik:
         return True
 
     def delete_action(self, action):
-        response = self.__delete(
+        return self.__delete(
             f"{ICONIK_ASSETS_API}/custom_actions/{action['context']}/{action['id']}"
         )
 
@@ -295,7 +306,7 @@ class Iconik:
             },
             "app_id": app_id
         }
-        response = self.__post(
+        return self.__post(
             f"{ICONIK_ASSETS_API}/custom_actions/{context}/",
             json=action
         )
