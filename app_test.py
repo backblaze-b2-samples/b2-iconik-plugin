@@ -1,12 +1,9 @@
 import os
 import pytest
-import responses
-from unittest.mock import patch
 from test_common import *
 from common import X_BZ_SHARED_SECRET
 
-from app import create_app
-import iconik
+from plugin import create_app
 
 
 @pytest.fixture(scope="function", autouse=True)

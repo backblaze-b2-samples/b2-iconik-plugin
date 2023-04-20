@@ -1,10 +1,13 @@
-import iconik
 import os
 import pytest
-import responses
+import plugin
 
 from test_common import *
 from responses import matchers
+
+
+def pytest_configure(config):
+    plugin._called_from_test = True
 
 
 def pytest_generate_tests(metafunc):
@@ -54,20 +57,20 @@ def setup_iconik_responses():
     responses.add(
         method=responses.GET,
         url=f'{iconik.ICONIK_ASSETS_API}/collections/{COLLECTION_ID}/contents/',
-        json={"objects": [{"id": SUBCOLLECTION_ID, "type": "COLLECTION"}]},
+        json={"objects": [{"id": SUBCOLLECTION_ID, "object_type": "collections"}]},
         status=200
     )
     responses.add(
         method=responses.GET,
         url=f'{iconik.ICONIK_ASSETS_API}/collections/{SUBCOLLECTION_ID}/contents/',
-        json={"objects": [{"id": ASSET_ID, "type": "ASSET"}]},
+        json={"objects": [{"id": ASSET_ID, "object_type": "assets"}]},
         status=200
     )
     responses.add(
         method=responses.GET,
         url=f'{iconik.ICONIK_ASSETS_API}/collections/{MULTI_COLLECTION_ID}/contents/',
         json={
-            "objects": [{"id": SUBCOLLECTION_ID, "type": "COLLECTION"}],
+            "objects": [{"id": SUBCOLLECTION_ID, "object_type": "collections"}],
             "next_url": f"/API/assets/v1/collections/{MULTI_COLLECTION_ID}/contents/?page=2&per_page=1"
         },
         status=200
@@ -76,7 +79,7 @@ def setup_iconik_responses():
         method=responses.GET,
         url=f'{iconik.ICONIK_ASSETS_API}/collections/{MULTI_COLLECTION_ID}/contents/',
         json={
-            "objects": [{"id": ASSET_ID, "type": "ASSET"}]
+            "objects": [{"id": ASSET_ID, "object_type": "assets"}]
         },
         match=[matchers.query_param_matcher({"page": 2, "per_page": 1})],
         status=200
@@ -84,12 +87,12 @@ def setup_iconik_responses():
 
     # Queue file copy
     responses.add(
-        method=responses.POST, 
+        method=responses.POST,
         url=f'{iconik.ICONIK_FILES_API}/storages/{LL_STORAGE_ID}/bulk/',
         json={
           'job_id': JOB_ID,
           'success': f'Queued copying of file sets to storage {LL_STORAGE_ID}'
-        }, 
+        },
         status=200
     )
     responses.add(

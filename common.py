@@ -1,6 +1,7 @@
 from flask import abort, Response
 
 import os
+import time
 
 # Names for secrets
 from iconik import Iconik
@@ -11,7 +12,7 @@ SHARED_SECRET_NAME = "bz-shared-secret"
 X_BZ_SHARED_SECRET = "x-bz-secret"
 
 
-def iconik_handler(req, logger, bz_shared_secret):
+def iconik_handler(req, logger, processor, bz_shared_secret):
     """
     Handles iconik custom action.
 
@@ -19,6 +20,8 @@ def iconik_handler(req, logger, bz_shared_secret):
     "/remove" route copies specified assets to B2, then deletes
         those assets' files from LucidLink
     """
+    start_time = time.perf_counter()
+    logger.log("DEBUG", "Handler started")
     logger.log("DEBUG", req.get_data(as_text=True), req)
 
     # Authenticate caller via shared secret
@@ -45,9 +48,6 @@ def iconik_handler(req, logger, bz_shared_secret):
         logger.log("ERROR", f"Invalid JSON body: {req.get_data(as_text=True)}")
         abort(400)
 
-    # The formats that we're going to copy
-    format_names = os.environ.get("FORMAT_NAMES", "ORIGINAL,PPRO_PROXY").split(',')
-
     # Create an iconic API client
     iconik = Iconik(os.environ['ICONIK_ID'], request.get("auth_token"))
 
@@ -69,12 +69,30 @@ def iconik_handler(req, logger, bz_shared_secret):
         abort(400)
 
     # Perform the requested operation
-    if req.path == "/add":
+    if req.path in ["/add", "/remove"]:
+        request["action"] = req.path[1:]
+        processor(process_request, request, logger, iconik, b2_storage, ll_storage)
+    else:
+        logger.log("ERROR", f"Invalid path: {req.path}")
+        abort(404)
+
+    logger.log("DEBUG", f"Handler complete in {(time.perf_counter() - start_time):.3f} seconds")
+    return "OK"
+
+
+def process_request(request, logger, iconik, b2_storage, ll_storage):
+    start_time = time.perf_counter()
+    logger.log("DEBUG", "Processor started")
+
+    # The formats that we're going to copy
+    format_names = os.environ.get("FORMAT_NAMES", "ORIGINAL,PPRO_PROXY").split(',')
+
+    if request["action"] == "add":
         # Copy files to LucidLink
         iconik.copy_files(request=request,
                           format_names=format_names,
                           target_storage_id=ll_storage["id"])
-    elif req.path == "/remove":
+    elif request["action"] == "remove":
         # Copy any original files to B2, waiting for job(s) to complete
         if iconik.copy_files(request=request,
                              format_names=[format_names[0]],
@@ -84,9 +102,5 @@ def iconik_handler(req, logger, bz_shared_secret):
             iconik.delete_files(request=request,
                                 format_names=format_names,
                                 storage_id=ll_storage["id"])
-    else:
-        logger.log("ERROR", f"Invalid path: {req.path}")
-        abort(404)
 
-    logger.log("DEBUG", "Processing complete")
-    return "OK"
+    logger.log("DEBUG", f"Processor complete in {(time.perf_counter() - start_time):.3f} seconds")

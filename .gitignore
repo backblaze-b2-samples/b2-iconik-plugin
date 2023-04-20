@@ -81,3 +81,6 @@ pytype_output/
 # Certificate and key for Gunicorn
 server.crt
 server.key
+
+# pyenv
+.python-version

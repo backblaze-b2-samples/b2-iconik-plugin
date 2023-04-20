@@ -6,6 +6,7 @@ import requests
 
 GCP_PROJECT_ID_URL = "http://metadata.google.internal/computeMetadata/v1/project/project-id"
 
+
 class SecretError(Exception):
     pass
 
@@ -28,7 +29,7 @@ def get_secret(project_id, secret_id):
     Get a secret from the Google Cloud Secret Manager
     Args:
         project_id (str): The Google Cloud Function project id
-        name (str): The secret id
+        secret_id (str): The secret id
     Returns:
         A secret
     """
@@ -51,7 +52,6 @@ class GcpLogger:
     def __init__(self, project_id):
         self.project_id = project_id
 
-
     def log(self, severity, message, req=None):
         """
         Emit a structured log message
@@ -62,7 +62,7 @@ class GcpLogger:
             <http://flask.pocoo.org/docs/1.0/api/#flask.Request>
         """
 
-        # Trace header code from 
+        # Trace header code from
         # https://cloud.google.com/functions/docs/monitoring/logging#writing_structured_logs
         global_log_fields = {}
 
@@ -83,7 +83,7 @@ class GcpLogger:
                 "requestSize": req.content_length,
                 "userAgent": req.user_agent.string,
                 "remoteIp": req.headers.get("x-forwarded-for"),
-                "protocol": req.scheme        
+                "protocol": req.scheme
             }
         } if req else {}
 
@@ -93,3 +93,7 @@ class GcpLogger:
         }
 
         print(json.dumps(entry))
+
+
+def gcp_processor(process_request, request, logger, iconik, b2_storage, ll_storage):
+    process_request(request, logger, iconik, b2_storage, ll_storage)

@@ -1,8 +1,6 @@
-import os
-
-from gcp import GcpLogger, get_project_id, get_secret
+from gcp import GcpLogger, get_project_id, get_secret, gcp_processor
 from common import iconik_handler, SHARED_SECRET_NAME
-from iconik import Iconik
+
 
 def gcp_iconik_handler(req):
     """
@@ -31,7 +29,8 @@ def gcp_iconik_handler(req):
     """
     project_id = get_project_id()
     return iconik_handler(
-        req, 
+        req,
         GcpLogger(project_id),
+        gcp_processor,
         get_secret(project_id, SHARED_SECRET_NAME)
     )
