@@ -1,9 +1,19 @@
-import datetime
 import json
+import logging
 
 
 class Logger:
-    def log(self, severity, message, req=None):
+    level_map = {
+        "CRITICAL": 50,
+        "ERROR": 40,
+        "WARNING": 30,
+        "INFO": 20,
+        "DEBUG": 10,
+        "NOTSET": 0
+    }
+
+    @staticmethod
+    def log(severity, message, req=None):
         """
         Emit a structured log message
         Args:
@@ -13,7 +23,7 @@ class Logger:
             <https://flask.pocoo.org/docs/1.0/api/#flask.Request>
         """
 
-        http_request = {
+        entry = {
             "httpRequest": {
                 "requestMethod": req.method,
                 "requestUrl": req.url,
@@ -22,12 +32,7 @@ class Logger:
                 "remoteIp": req.headers.get("x-forwarded-for"),
                 "protocol": req.scheme
             }
-        } if req else {}
+        } if req else message
 
-        entry = http_request | {
-            "timestamp": datetime.datetime.now().isoformat(sep=' '),
-            "severity": severity,
-            "message": message
-        }
+        logging.log(Logger.level_map[severity], json.dumps(entry))
 
-        print(json.dumps(entry), flush=True)
