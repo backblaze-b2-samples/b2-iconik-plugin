@@ -104,3 +104,8 @@ def process_request(request, logger, iconik, b2_storage, ll_storage):
                                 storage_id=ll_storage["id"])
 
     logger.log("DEBUG", f"Processor complete in {(time.perf_counter() - start_time):.3f} seconds")
+
+
+def get_version():
+    version = open('version.txt', 'r').read().strip()
+    return version
