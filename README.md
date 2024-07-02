@@ -164,15 +164,17 @@ You can view logs for the function with:
 Create iconik Custom Actions
 ----------------------------
 
-Run the included `create_custom_actions.py` script with the endpoint of the plugin as an argument:
+Run the included `create_custom_actions.py` script with the endpoint of the plugin and the two storage IDs as arguments:
 
 	ICONIK_TOKEN = '<your iconik application token value>' \
-	python create_custom_actions.py <your plugin endpoint>
+	python create_custom_actions.py --endpoint <your plugin endpoint> \
+        --b2_storage_id <your B2 storage ID in iconik> \
+        --ll_storage_id <your LucidLink storage ID in iconik>
 
 You can delete the custom actions, if necessary, with:
 
 	ICONIK_TOKEN = '<your iconik application token value>' \
-	python delete_custom_actions.py <your plugin endpoint>
+	python delete_custom_actions.py --endpoint <your plugin endpoint>
 
 Test the Integration
 --------------------
