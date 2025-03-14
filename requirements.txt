@@ -1,4 +1,4 @@
-flask==2.2.2
+flask==2.2.5
 flask_restful==0.3.9
 gevent==23.9.0
 google_cloud_secret_manager==2.12.3
