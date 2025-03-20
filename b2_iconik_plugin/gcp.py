@@ -1,8 +1,30 @@
-from google.cloud import secretmanager
+# MIT License
+#
+# Copyright (c) 2025 Backblaze
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+import json
 
 import google_crc32c
-import json
 import requests
+from google.cloud import secretmanager
 
 GCP_PROJECT_ID_URL = "http://metadata.google.internal/computeMetadata/v1/project/project-id"
 
@@ -56,7 +78,7 @@ class GcpLogger:
         """
         Emit a structured log message
         Args:
-            severity (str): "INFO", "DEBUG", "ERROR" etc
+            severity (str): "INFO", "DEBUG", "ERROR" etc.
             message (str): The message to log
             req (flask.Request): The request object.
             <http://flask.pocoo.org/docs/1.0/api/#flask.Request>
@@ -67,8 +89,8 @@ class GcpLogger:
         global_log_fields = {}
 
         request_is_defined = "request" in globals() or "request" in locals()
-        if request_is_defined and request:
-            trace_header = request.headers.get("X-Cloud-Trace-Context")
+        if request_is_defined and req:
+            trace_header = req.headers.get("X-Cloud-Trace-Context")
 
             if trace_header:
                 trace = trace_header.split("/")

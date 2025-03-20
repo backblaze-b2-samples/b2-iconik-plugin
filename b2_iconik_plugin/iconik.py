@@ -1,7 +1,30 @@
-from requests import Session
+# MIT License
+#
+# Copyright (c) 2025 Backblaze
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 from time import sleep
 
-from logger import Logger
+from requests import Session
+
+from b2_iconik_plugin.logger import Logger
 
 ASSET_OBJECT_TYPE = "assets"
 COLLECTION_OBJECT_TYPE = "collections"
@@ -10,6 +33,8 @@ ICONIK_API_BASE = "https://app.iconik.io"
 ICONIK_ASSETS_API = ICONIK_API_BASE + "/API/assets/v1"
 ICONIK_FILES_API = ICONIK_API_BASE + "/API/files/v1"
 ICONIK_JOBS_API = ICONIK_API_BASE + "/API/jobs/v1"
+ICONIK_SETTINGS_API = ICONIK_API_BASE + "/API/settings/v1"
+ICONIK_USERS_API = ICONIK_API_BASE + "/API/users/v1"
 
 SUCCESS_STATUS_LIST = [
     "FINISHED",
@@ -46,32 +71,26 @@ class Iconik:
             "Auth-Token": auth_token
         })
 
+    def __request(self, method, url, json=None, params=None, raise_for_status=True):
+        self.logger.log("DEBUG", {"method": method, "url": url, "json": json, "params": params})
+        response = self.session.request(method, url, json=json, params=params)
+        payload = response.json() if response.text else None
+        self.logger.log("DEBUG", {"status_code": response.status_code, "payload": payload})
+        if raise_for_status:
+            response.raise_for_status()
+        return response
+
     def __get(self, url, params=None, raise_for_status=True):
-        self.logger.log("DEBUG", {"method": "GET", "url": url, "params": params})
-        response = self.session.get(url, params=params)
-        payload = response.json() if response.text else None
-        self.logger.log("DEBUG", {"status_code": response.status_code, "payload": payload})
-        if raise_for_status:
-            response.raise_for_status()
-        return response
+        return self.__request('GET', url, None, params, raise_for_status)
 
-    def __delete(self, url, raise_for_status=True):
-        self.logger.log("DEBUG", {"method": "DELETE", "url": url})
-        response = self.session.delete(url)
-        payload = response.json() if response.text else None
-        self.logger.log("DEBUG", {"status_code": response.status_code, "payload": payload})
-        if raise_for_status:
-            response.raise_for_status()
-        return response
+    def __delete(self, url, params=None, raise_for_status=True):
+        return self.__request('DELETE', url, None, params, raise_for_status)
 
-    def __post(self, url, json=None, raise_for_status=True):
-        self.logger.log("DEBUG", {"method": "POST", "url": url, "json": json})
-        response = self.session.post(url, json=json)
-        payload = response.json() if response.text else None
-        self.logger.log("DEBUG", {"status_code": response.status_code, "payload": payload})
-        if raise_for_status:
-            response.raise_for_status()
-        return response
+    def __post(self, url, json=None, params=None, raise_for_status=True):
+        return self.__request('POST', url, json, params, raise_for_status)
+
+    def __patch(self, url, json=None, params=None, raise_for_status=True):
+        return self.__request('PATCH', url, json, params, raise_for_status)
 
     def get_objects(self, first_url, params=None):
         """
@@ -131,7 +150,10 @@ class Iconik:
         Returns:
             A collection
         """
-        response = self.__get(f"{ICONIK_ASSETS_API}/collections/{id_}")
+        response = self.__get(f"{ICONIK_ASSETS_API}/collections/{id_}", None, False)
+        if response.status_code == 404:
+            return None
+        response.raise_for_status()
         return response.json()
 
     def get_collection_contents(self, id_, object_types):
@@ -309,4 +331,168 @@ class Iconik:
         return self.__post(
             f"{ICONIK_ASSETS_API}/custom_actions/{context}/",
             json=action
+        ).json()
+
+    def create_asset(self, title, type_, collection_id=None, apply_default_acls=True):
+        """
+        Create a new asset
+        """
+        asset = {
+            "title": title,
+            "type": type_,
+            "collection_id": collection_id,
+        }
+        return self.__post(
+            f"{ICONIK_ASSETS_API}/assets/?apply_default_acls={'true' if apply_default_acls else 'false'}",
+            json=asset
+        ).json()
+
+    def get_asset(self, asset_id):
+        response =  self.__get(f"{ICONIK_ASSETS_API}/assets/{asset_id}/", None, False)
+        if response.status_code == 404:
+            return None
+        response.raise_for_status()
+        return response.json()
+
+    def get_current_user(self):
+        return self.__get(f"{ICONIK_USERS_API}/users/current/").json()
+
+    def get_system_settings(self):
+        return self.__get(f"{ICONIK_SETTINGS_API}/system/current/").json()
+
+    def create_format(self, asset_id, user_id, name, metadata, storage_methods):
+        """
+        Create format and associate to asset
+        """
+        format_ = {
+            "user_id": user_id,
+            "name": name,
+            "metadata": metadata,
+            "storage_methods": storage_methods
+        }
+        return self.__post(
+            f"{ICONIK_FILES_API}/assets/{asset_id}/formats",
+            json=format_
+        ).json()
+
+    def create_file_set(self, asset_id, format_id, storage_id, name, base_dir="", component_ids=None):
+        """
+        Create file set and associate to asset
+        """
+        file_set = {
+            "format_id": format_id,
+            "storage_id": storage_id,
+            "base_dir": base_dir,
+            "name": name,
+            "component_ids": [] if component_ids is None else component_ids
+        }
+        return self.__post(
+            f"{ICONIK_FILES_API}/assets/{asset_id}/file_sets",
+            json=file_set
+        ).json()
+
+    def get_asset_file_sets(self, asset_id):
+        return self.get_objects(f"{ICONIK_FILES_API}/assets/{asset_id}/file_sets/")
+
+    def create_file(self, asset_id, original_name, size, type_, storage_id, file_set_id, format_id, directory_path=""):
+        """
+        Create file and associate to asset
+        """
+        file = {
+            "original_name": original_name,
+            "directory_path": directory_path,
+            "size": size,
+            "type": type_,
+            "storage_id": storage_id,
+            "file_set_id": file_set_id,
+            "format_id": format_id
+        }
+        return self.__post(
+            f"{ICONIK_FILES_API}/assets/{asset_id}/files",
+            json=file
+        ).json()
+
+    def create_job(self, object_type, object_id, type_, status, title, metadata):
+        """
+        Create a new job
+        """
+        job = {
+            "object_type": object_type,
+            "object_id": object_id,
+            "type": type_,
+            "status": status,
+            "title": title,
+            "metadata": metadata
+        }
+        return self.__post(
+            f"{ICONIK_JOBS_API}/jobs/",
+            json=job
+        ).json()
+
+    def update_file(self, asset_id, file_id, status, progress_processed):
+        """
+        Update file information
+        """
+        file = {
+            "status": status,
+            "progress_processed": progress_processed
+        }
+        return self.__patch(
+            f"{ICONIK_FILES_API}/assets/{asset_id}/files/{file_id}/",
+            json=file
+        ).json()
+
+    def create_keyframe(self, asset_id, use_storage_transcode_ignore_pattern=True, priority=5):
+        """
+        Create keyframe and associate to asset
+        """
+        keyframe = {
+            "use_storage_transcode_ignore_pattern": use_storage_transcode_ignore_pattern,
+            "priority": priority,
+        }
+        return self.__post(
+            f"{ICONIK_FILES_API}/assets/{asset_id}/keyframes",
+            json=keyframe
+        ).json()
+
+
+    def update_job(self, job_id, status, progress_processed):
+        """
+        Create a new job
+        """
+        job = {
+            "status": status,
+            "progress_processed": progress_processed
+        }
+        return self.__patch(
+            f"{ICONIK_JOBS_API}/jobs/{job_id}",
+            json=job
+        ).json()
+
+
+    def add_assets_to_delete_queue(self, asset_ids):
+        assets = {
+            "ids" : asset_ids
+        }
+        self.__post(
+            f"{ICONIK_ASSETS_API}/delete_queue/assets/",
+            json=assets
         )
+
+    def get_deleted_objects(self):
+        return self.get_objects(f"{ICONIK_ASSETS_API}/delete_queue/assets/")
+
+    def purge_assets_from_delete_queue(self, asset_ids):
+        assets = {
+            "ids" : asset_ids
+        }
+        self.__post(
+            f"{ICONIK_ASSETS_API}/delete_queue/assets/purge/",
+            json=assets
+        )
+
+    def delete_asset(self, asset_id):
+        self.__delete(f"{ICONIK_ASSETS_API}/assets/{asset_id}/")
+
+    def purge_asset(self, asset_id):
+        self.__delete(f"{ICONIK_ASSETS_API}/assets/{asset_id}/purge/")

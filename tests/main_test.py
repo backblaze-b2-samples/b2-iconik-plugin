@@ -1,19 +1,36 @@
-import flask
+# MIT License
+#
+# Copyright (c) 2025 Backblaze
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
 import os
-import pytest
-import re
-import responses
-import requests
-from responses import matchers
-from unittest.mock import patch, Mock
-from werkzeug.exceptions import HTTPException
-from test_common import *
-from gcp_test import get_smsc_mock, setup_gcp_responses, GCF_PROJECT_ID
-from common import X_BZ_SHARED_SECRET
+from unittest.mock import patch
 
-from gcp import GcpLogger
-from main import gcp_iconik_handler
-import iconik
+import flask
+import pytest
+from werkzeug.exceptions import HTTPException
+
+from b2_iconik_plugin.common import X_BZ_SHARED_SECRET
+from b2_iconik_plugin.gcp import GcpLogger
+from b2_iconik_plugin.main import gcp_iconik_handler
+from tests.gcp_test import get_smsc_mock, setup_gcp_responses, GCF_PROJECT_ID
+from tests.test_common import *
 
 
 # Make a Flask app so we can do app.test_request_context()
@@ -31,7 +48,7 @@ def logger():
 @pytest.fixture(scope="function", autouse=True)
 def setup_secrets(request):
     setup_gcp_responses()
-    with patch("gcp.secretmanager.SecretManagerServiceClient", new_callable=get_smsc_mock) as mock_smc:
+    with patch("b2_iconik_plugin.gcp.secretmanager.SecretManagerServiceClient", new_callable=get_smsc_mock) as mock_smc:
         yield mock_smc
 
 
@@ -41,7 +58,7 @@ def test_iconik_handler_add(app, logger):
             path=f'/add?b2_storage_id={B2_STORAGE_ID}&ll_storage_id={LL_STORAGE_ID}',
             method='POST',
             json=PAYLOAD,
-            headers={X_BZ_SHARED_SECRET: SHARED_SECRET}):
+            headers={X_BZ_SHARED_SECRET: os.environ["BZ_SHARED_SECRET"]}):
 
         response = flask.Response(gcp_iconik_handler(flask.request))
 
@@ -57,7 +74,7 @@ def test_iconik_handler_remove(app, logger):
             path=f'/remove?b2_storage_id={B2_STORAGE_ID}&ll_storage_id={LL_STORAGE_ID}',
             method='POST',
             json=PAYLOAD,
-            headers={X_BZ_SHARED_SECRET: SHARED_SECRET}):
+            headers={X_BZ_SHARED_SECRET: os.environ["BZ_SHARED_SECRET"]}):
 
         response = flask.Response(gcp_iconik_handler(flask.request))
 
@@ -74,10 +91,10 @@ def test_iconik_handler_400_invalid_content(app, logger):
             path=f'/add?b2_storage_id={B2_STORAGE_ID}&ll_storage_id={LL_STORAGE_ID}',
             method='POST',
             data='This is not JSON!',
-            headers={X_BZ_SHARED_SECRET: SHARED_SECRET}):
-        with pytest.raises(HTTPException) as httperror:
-            response = gcp_iconik_handler(flask.request)
-        assert 400 == httperror.value.code
+            headers={X_BZ_SHARED_SECRET: os.environ["BZ_SHARED_SECRET"]}):
+        with pytest.raises(HTTPException) as http_error:
+            gcp_iconik_handler(flask.request)
+        assert 400 == http_error.value.code
 
 
 @responses.activate
@@ -85,10 +102,10 @@ def test_iconik_handler_400_missing_content(app, logger):
     with app.test_request_context(
             path=f'/add?b2_storage_id={B2_STORAGE_ID}&ll_storage_id={LL_STORAGE_ID}',
             method='POST',
-            headers={X_BZ_SHARED_SECRET: SHARED_SECRET}):
-        with pytest.raises(HTTPException) as httperror:
-            response = gcp_iconik_handler(flask.request)
-        assert 400 == httperror.value.code
+            headers={X_BZ_SHARED_SECRET: os.environ["BZ_SHARED_SECRET"]}):
+        with pytest.raises(HTTPException) as http_error:
+            gcp_iconik_handler(flask.request)
+        assert 400 == http_error.value.code
 
 
 @responses.activate
@@ -99,10 +116,10 @@ def test_iconik_handler_400_invalid_context(app, logger):
             path=f'/add?b2_storage_id={B2_STORAGE_ID}&ll_storage_id={LL_STORAGE_ID}',
             method='POST',
             json=json,
-            headers={X_BZ_SHARED_SECRET: SHARED_SECRET}):
-        with pytest.raises(HTTPException) as httperror:
-            response = gcp_iconik_handler(flask.request)
-        assert 400 == httperror.value.code
+            headers={X_BZ_SHARED_SECRET: os.environ["BZ_SHARED_SECRET"]}):
+        with pytest.raises(HTTPException) as http_error:
+            gcp_iconik_handler(flask.request)
+        assert 400 == http_error.value.code
 
 
 @responses.activate
@@ -113,10 +130,10 @@ def test_iconik_handler_400_missing_context(app, logger):
             path=f'/add?b2_storage_id={B2_STORAGE_ID}&ll_storage_id={LL_STORAGE_ID}',
             method='POST',
             json=json,
-            headers={X_BZ_SHARED_SECRET: SHARED_SECRET}):
-        with pytest.raises(HTTPException) as httperror:
-            response = gcp_iconik_handler(flask.request)
-        assert 400 == httperror.value.code
+            headers={X_BZ_SHARED_SECRET: os.environ["BZ_SHARED_SECRET"]}):
+        with pytest.raises(HTTPException) as http_error:
+            gcp_iconik_handler(flask.request)
+        assert 400 == http_error.value.code
 
 
 @responses.activate
@@ -126,9 +143,9 @@ def test_iconik_handler_401_invalid(app, logger):
             method='POST',
             json=PAYLOAD,
             headers={X_BZ_SHARED_SECRET: 'dummy'}):
-        with pytest.raises(HTTPException) as httperror:
-            response = gcp_iconik_handler(flask.request)
-        assert 401 == httperror.value.code
+        with pytest.raises(HTTPException) as http_error:
+            gcp_iconik_handler(flask.request)
+        assert 401 == http_error.value.code
 
 
 @responses.activate
@@ -137,9 +154,9 @@ def test_iconik_handler_401_missing(app, logger):
             path=f'/add?b2_storage_id={B2_STORAGE_ID}&ll_storage_id={LL_STORAGE_ID}',
             method='POST',
             json=PAYLOAD):
-        with pytest.raises(HTTPException) as httperror:
-            response = gcp_iconik_handler(flask.request)
-        assert 401 == httperror.value.code
+        with pytest.raises(HTTPException) as http_error:
+            gcp_iconik_handler(flask.request)
+        assert 401 == http_error.value.code
 
 
 @responses.activate
@@ -148,21 +165,21 @@ def test_iconik_handler_404(app, logger):
             path=f'/invalid?b2_storage_id={B2_STORAGE_ID}&ll_storage_id={LL_STORAGE_ID}',
             method='POST',
             json=PAYLOAD,
-            headers={X_BZ_SHARED_SECRET: SHARED_SECRET}):
-        with pytest.raises(HTTPException) as httperror:
-            response = gcp_iconik_handler(flask.request)
-        assert 404 == httperror.value.code
+            headers={X_BZ_SHARED_SECRET: os.environ["BZ_SHARED_SECRET"]}):
+        with pytest.raises(HTTPException) as http_error:
+            gcp_iconik_handler(flask.request)
+        assert 404 == http_error.value.code
 
 
 @responses.activate
 def test_iconik_handler_405(app, logger):
     with app.test_request_context(
             path=f'/add?b2_storage_id={B2_STORAGE_ID}&ll_storage_id={LL_STORAGE_ID}',
-            method='GET', 
-            headers={X_BZ_SHARED_SECRET: SHARED_SECRET}):
-        with pytest.raises(HTTPException) as httperror:
-            response = gcp_iconik_handler(flask.request)
-        assert 405 == httperror.value.code
+            method='GET',
+            headers={X_BZ_SHARED_SECRET: os.environ["BZ_SHARED_SECRET"]}):
+        with pytest.raises(HTTPException) as http_error:
+            gcp_iconik_handler(flask.request)
+        assert 405 == http_error.value.code
 
 @responses.activate
 def test_iconik_handler_500(app, logger):
@@ -170,7 +187,7 @@ def test_iconik_handler_500(app, logger):
             path=f'/add?b2_storage_id={B2_STORAGE_ID}&ll_storage_id={INVALID_STORAGE_ID}',
             method='POST',
             json=PAYLOAD,
-            headers={X_BZ_SHARED_SECRET: SHARED_SECRET}):
-        with pytest.raises(HTTPException) as httperror:
-            response = gcp_iconik_handler(flask.request)
-        assert 500 == httperror.value.code
+            headers={X_BZ_SHARED_SECRET: os.environ["BZ_SHARED_SECRET"]}):
+        with pytest.raises(HTTPException) as http_error:
+            gcp_iconik_handler(flask.request)
+        assert 500 == http_error.value.code

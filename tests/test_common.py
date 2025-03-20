@@ -1,19 +1,42 @@
-import iconik
+# MIT License
+#
+# Copyright (c) 2025 Backblaze
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+import os
+
 import responses
 
-from common import AUTH_TOKEN_NAME, SHARED_SECRET_NAME
+from b2_iconik_plugin.common import AUTH_TOKEN_NAME, SHARED_SECRET_NAME
+from b2_iconik_plugin.iconik import ICONIK_FILES_API
 
 APP_ID = "ICONIK_PLUGIN"
 LL_STORAGE_ID = "d39b62e1-c586-438a-a82b-70543c228c1b"
 B2_STORAGE_ID = "73a746d2-a3ed-4d61-8fd9-aa8f37a27bbb"
 INVALID_STORAGE_ID = '4e14b12e-ce4c-4920-a2b8-7a8dfa533256'
 
-# Values for secrets
+# Default values for secrets
 AUTH_TOKEN = "SECRET_SQUIRREL"
 SHARED_SECRET = 'top_secret'
 
-SECRETS = { 
-    SHARED_SECRET_NAME: SHARED_SECRET,
+SECRETS = {
+    SHARED_SECRET_NAME: os.environ["BZ_SHARED_SECRET"],
     AUTH_TOKEN_NAME: AUTH_TOKEN
 }
 
@@ -55,11 +78,14 @@ PAYLOAD = {
 }
 
 
+GCP_PROJECT_ID = 'my-gcp-project-id'
+
+
 def assert_copy_call_counts(storage_id, format_count):
     # There should be two calls to bulk copy per format - one for the asset and one
     # for the collection
     assert responses.assert_call_count(
-        f'{iconik.ICONIK_FILES_API}/storages/{storage_id}/bulk/',
+        f'{ICONIK_FILES_API}/storages/{storage_id}/bulk/',
         2 * format_count
     )
 
@@ -68,18 +94,18 @@ def assert_delete_call_counts():
     # The asset should be deleted and purged twice per format - once directly
     # and once via the subcollection
     assert responses.assert_call_count(
-        f'{iconik.ICONIK_FILES_API}/assets/{ASSET_ID}/file_sets/{ORIGINAL_FILE_SET_ID}/',
+        f'{ICONIK_FILES_API}/assets/{ASSET_ID}/file_sets/{ORIGINAL_FILE_SET_ID}/',
         2
     )
     assert responses.assert_call_count(
-        f'{iconik.ICONIK_FILES_API}/assets/{ASSET_ID}/file_sets/{ORIGINAL_FILE_SET_ID}/purge/',
+        f'{ICONIK_FILES_API}/assets/{ASSET_ID}/file_sets/{ORIGINAL_FILE_SET_ID}/purge/',
         2
     )
     assert responses.assert_call_count(
-        f'{iconik.ICONIK_FILES_API}/assets/{ASSET_ID}/file_sets/{PPRO_PROXY_FILE_SET_ID}/',
+        f'{ICONIK_FILES_API}/assets/{ASSET_ID}/file_sets/{PPRO_PROXY_FILE_SET_ID}/',
         2
     )
     assert responses.assert_call_count(
-        f'{iconik.ICONIK_FILES_API}/assets/{ASSET_ID}/file_sets/{PPRO_PROXY_FILE_SET_ID}/purge/',
+        f'{ICONIK_FILES_API}/assets/{ASSET_ID}/file_sets/{PPRO_PROXY_FILE_SET_ID}/purge/',
         2
     )

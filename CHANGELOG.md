@@ -1,6 +1,13 @@
 # Changelog
 
-<!--next-version-placeholder-->
+## v1.2.0 (03/20/2025)
+
+### Feature
+
+- Major reorganization and refactoring to simplify logic
+- Added Dockerfile
+- Added integration test
+- Added LICENSE headers
 
 ## v1.1.0 (04/24/2023)
 
