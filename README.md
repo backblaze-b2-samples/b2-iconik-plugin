@@ -52,19 +52,57 @@ Create an iconik Application Token
 
 Create an [iconik Application Token](https://app.iconik.io/help/pages/admin/appl_tokens) for the plugin and make a note of the token id and value.
 
-Deploy the Plugin
------------------
+Configuration
+-------------
 
-Create a random string to use as a secret shared by iconik and the plugin. For example, with `openssl`:
+Create a random string to use as a secret shared by iconik and the plugin. iconik will use this as a bearer token on 
+custom action requests from iconik to the plugin. 
+
+For example, with `openssl`:
 
     openssl rand -hex 32
 
-Keep a note of the shared secret.
+Keep a note of the shared secret!
+
+You will configure the plugin with the storage IDs of the Backblaze B2 Storage and the LucidLink (ISG) Storage, the iconik 
+application token and its ID, and the shared secret.
+
+You will set environment variables for the plugin with the iconik token ID and shared secret - the exact details vary 
+depending on how you deploy the plugin. You will use the iconik token, storage IDs and shared secret when you
+[create the custom actions in iconik](#create-iconik-custom-actions).
+
+You will also need to decide which iconik Asset Formats the plugin should manipulate. The default list of formats is 
+`ORIGINAL` and `PPRO_PROXY`. If you use a different proxy format, such as `EDIT_PROXY`, you can use that in place of 
+`PPRO_PROXY`. Similarly, if you want the plugin to manipulate _only_ Premiere Pro proxy files, you can configure the format
+list to b2 just `PPRO_PROXY`.
+
+There are two ways to configure format names if you wish to do so: in the custom action or via environment variables. Set 
+the format names in the custom action if you wish to create multiple custom actions for adding and removing files from 
+LucidLink. For example, you might create a total of four custom actions:
+
+* Add original files to LucidLink
+* Add proxy files to LucidLink
+* Remove original files from LucidLink
+* Remove proxy files from LucidLink
+
+If you wish to create just two custom actions, and you need a different list of format names from the default, `ORIGINAL` 
+and `PPRO_PROXY`, you can set the format names via an environment variable. For example, to have the plugin add/remove 
+just Premiere Pro proxy files, you would use:
+
+```dotenv
+FORMAT_NAMES=PPRO_PROXY
+```
+
+If you configure _both_ the custom actions and the environment variable, the list of formats passed by the custom action
+takes precedence.
+
+Deploy the Plugin
+-----------------
 
 ### In the Flask Development Server
 
-If you make changes to the app, you can run it in Flask's development server for development and testing, but do not
-use the development server for production deployments.
+You can run it in Flask's development server for development and testing, but do not use the development server for 
+production deployments.
 
 #### Prerequisites
 
@@ -81,7 +119,7 @@ Change to the plugin directory and install the required Python modules:
 	pip install -r requirements.txt
 
 Create a file in the plugin directory named `.env` containing your iconik token id, the shared secret you created and,
-optionally, the iconik format names, if they are not `ORIGINAL,PPRO_PROXY`.
+optionally, the iconik format names:
 
 	ICONIK_ID='<required: your iconik application token id>'
 	BZ_SHARED_SECRET='<required: your shared secret>'
@@ -110,7 +148,7 @@ Change to the plugin directory and install the required Python modules:
 	pip install -r requirements.txt
 
 Create a file in the plugin directory named `.env` containing your iconik token id, the shared secret you created and, 
-optionally, the iconik format names, if they are not `ORIGINAL,PPRO_PROXY`.
+optionally, the iconik format names:
 
 	ICONIK_ID='<required: your iconik application token id>'
 	BZ_SHARED_SECRET='<required: your shared secret>'
@@ -157,7 +195,7 @@ You can test connectivity to the plugin by opening `http://1.2.3.4:8000/add` in 
 
     {"message": "The method is not allowed for the requested URL."}
 
-Note - for production deployment, you should [deploy Nginx as an HTTP proxy for Gunicorn](https://docs.gunicorn.org/en/stable/deploy.html#nginx-configuration) and [configure Nginx as an HTTPS server](http://nginx.org/en/docs/http/configuring_https_servers.html). 
+Note - for production deployment, you should also [deploy Nginx as an HTTP proxy for Gunicorn](https://docs.gunicorn.org/en/stable/deploy.html#nginx-configuration) and [configure Nginx as an HTTPS server](http://nginx.org/en/docs/http/configuring_https_servers.html). 
 
 ### In a Docker Container
 
@@ -237,14 +275,27 @@ Create iconik Custom Actions
 Run the included `create_custom_actions.py` script with the endpoint of the plugin and the two storage IDs as arguments. Note that you will need to provide an iconik application token as an environment variable:
 
 	ICONIK_TOKEN = '<your iconik application token value>' \
-	python create_custom_actions.py --endpoint <your plugin endpoint> \
-        --b2_storage_id <your B2 storage ID in iconik> \
-        --ll_storage_id <your LucidLink storage ID in iconik>
+	python -m b2_iconik_plugin.create_custom_actions <your plugin endpoint> \
+        <your B2 storage ID in iconik> \
+        <your LucidLink storage ID in iconik> \
+        <optional, comma-separated list of formats>
+
+For example:
+
+	ICONIK_TOKEN = 'eyhjofprwehjpgrwpg.brwipgbrwjvkpbwripfgbirweupgbi.rgbkfjiewpofrjwrfn' \
+	python -m b2_iconik_plugin.create_custom_actions https://myserver.example.com/ \
+        73a746d2-a3ed-4d61-8fd9-aa8f37a27bbb \
+        d39b62e1-c586-438a-a82b-70543c228c1b \
+        PPRO_PROXY
 
 You can delete the custom actions, if necessary, with:
 
 	ICONIK_TOKEN = '<your iconik application token value>' \
-	python delete_custom_actions.py --endpoint <your plugin endpoint>
+	python -m b2_iconik_plugin.delete_custom_actions <your plugin endpoint> \
+        <optional, comma-separated list of formats>
+
+If you do not specify a list of formats, then this command will delete all custom actions that match the endpoint. If you do
+supply a list of formats, only custom actions with matching format lists will be deleted.
 
 Test the Integration
 --------------------
@@ -296,7 +347,7 @@ tests/main_test.py ...........                                                  
 ```
 
 You can run integration tests also by running `pytest` with the `--integration` flag. Note that your test iconik
-environment must have two storages and you must create an application token in iconik. You do not need an ISG or
+environment must have two storages, and you must create an application token in iconik. You do not need an ISG or
 LucidLink to run the integration tests, since they simply copy and delete files in the iconik storages.
 
 Tou must set the following environment variables:
@@ -326,3 +377,12 @@ tests/integration_test.py .                                                     
 ...
 ======================================================================================== 1 passed, 3 warnings in 40.03s ========================================================================================
 ```
+
+Troubleshooting
+---------------
+
+The default configuration, if you do not explicitly configure `FORMAT_NAMES`, is for the plugin to attempt to copy both the
+`ORIGINAL` and `PPRO_PROXY` formats for each asset. You will see errors in the iconik jobs dashboard if you copy assets that
+do not have a file for a configured format. If you are not creating `PPRO_PROXY` files, then set `FORMAT_NAMES` to `ORIGINAL`.
+Conversely, if you are using a format other than `PPRO_PROXY`, you might want to set `FORMAT_NAMES` to a value such as 
+`ORIGINAL, MY_COOL_FORMAT`.

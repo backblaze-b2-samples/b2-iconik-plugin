@@ -19,8 +19,9 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import os
 
-from b2_iconik_plugin.common import IconikHandler, SHARED_SECRET_NAME
+from b2_iconik_plugin.common import IconikHandler, SHARED_SECRET_NAME, DEFAULT_FORMAT_NAMES
 from b2_iconik_plugin.gcp import GcpLogger, get_project_id, get_secret
 
 
@@ -50,6 +51,8 @@ def gcp_iconik_handler(req):
         <http://flask.pocoo.org/docs/1.0/api/#flask.Flask.make_response>.
     """
     project_id = get_project_id()
-    handler = IconikHandler(GcpLogger(project_id), get_secret(project_id, SHARED_SECRET_NAME))
+    format_names = os.environ.get("FORMAT_NAMES", DEFAULT_FORMAT_NAMES).split(',')
+    handler = IconikHandler(GcpLogger(project_id), get_secret(project_id, SHARED_SECRET_NAME),
+                            os.environ['ICONIK_ID'], format_names)
 
     return handler.post(req)

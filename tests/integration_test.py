@@ -31,6 +31,7 @@ import requests
 
 from b2_iconik_plugin.common import X_BZ_SHARED_SECRET
 from b2_iconik_plugin.iconik import Iconik
+from tests.test_common import ACTION_ID
 from tests.test_common import APP_ID
 
 logger = logging.getLogger(__name__)
@@ -42,14 +43,11 @@ MAX_RETRIES = 8
 # B2_STORAGE_ID must be a B2 storage, but LL_STORAGE_ID can be any storage type
 B2_STORAGE_ID = os.environ['B2_STORAGE_ID']
 LL_STORAGE_ID = os.environ['LL_STORAGE_ID']
-ICONIK_APP_ID = os.environ['ICONIK_ID']
+ICONIK_ID = os.environ['ICONIK_ID']
 ICONIK_TOKEN = os.environ['ICONIK_TOKEN']
 BZ_SHARED_SECRET = os.environ['BZ_SHARED_SECRET']
 
-ACTION_ID = '86f485b2-c71e-11ec-93c4-32f3401f5ebb'
-
 TEST_MPEG_URL = 'https://filesamples.com/samples/video/mpeg/sample_1920x1080.mpeg'
-TEST_MPEG_LEN = 13666304  # TODO
 
 def upload_file_to_iconik(iconik, user_id, filename):
     asset = iconik.create_asset(filename, 'ASSET')
@@ -92,6 +90,7 @@ def upload_file_to_iconik(iconik, user_id, filename):
 
     return asset
 
+
 def get_add_payload(user_id, system_domain_id, asset_id, auth_token):
     return {
         "user_id": user_id,
@@ -110,10 +109,11 @@ def get_add_payload(user_id, system_domain_id, asset_id, auth_token):
     }
 
 
-def check_environment_variables():
+@pytest.fixture
+def assert_environment_variables():
     assert B2_STORAGE_ID, "Must set B2_STORAGE_ID environment variable for integration tests"
     assert LL_STORAGE_ID, "Must set LL_STORAGE_ID environment variable for integration tests"
-    assert ICONIK_APP_ID and ICONIK_APP_ID != APP_ID, "Must set ICONIK_APP_ID environment variable for integration tests"
+    assert ICONIK_ID and ICONIK_ID != APP_ID, "Must set ICONIK_APP_ID environment variable for integration tests"
     assert ICONIK_TOKEN, "Must set ICONIK_TOKEN environment variable for integration tests"
     assert BZ_SHARED_SECRET, "Must set BZ_SHARED_SECRET environment variable for integration tests"
 
@@ -136,66 +136,76 @@ def wait_for_asset_deletion(iconik, asset_id):
     wait_for_operation(lambda : None == iconik.get_asset(asset_id))
 
 
-@pytest.mark.integration
-def test_add_remove(client):
-    check_environment_variables()
+class TestAddRemove:
+    def __init__(self):
+        self.asset = None
 
-    iconik = Iconik(ICONIK_APP_ID, ICONIK_TOKEN)
-    system_settings = iconik.get_system_settings()
-    user = iconik.get_current_user()
-    filename = os.path.basename(urlparse(TEST_MPEG_URL).path)
+    @pytest.mark.integration
+    def test_add_asset(self, client, assert_environment_variables):
+        iconik = Iconik(ICONIK_ID, ICONIK_TOKEN)
+        system_settings = iconik.get_system_settings()
+        user = iconik.get_current_user()
+        filename = os.path.basename(urlparse(TEST_MPEG_URL).path)
 
-    asset = upload_file_to_iconik(iconik, user['id'], filename)
+        self.asset = upload_file_to_iconik(iconik, user['id'], filename)
 
-    # Check that the asset is present in the correct storage
-    file_sets = iconik.get_asset_file_sets(asset['id'])
-    assert 1 == len(file_sets)
-    assert B2_STORAGE_ID == file_sets[0]['storage_id']
-    assert filename == file_sets[0]['name']
+        # Check that the asset is present in the correct storage
+        file_sets = iconik.get_asset_file_sets(self.asset['id'])
+        assert 1 == len(file_sets)
+        assert B2_STORAGE_ID == file_sets[0]['storage_id']
+        assert filename == file_sets[0]['name']
 
-    # Simulate an 'add' custom action call from iconik
-    payload = get_add_payload(user['id'], system_settings['system_domain_id'], asset['id'], ICONIK_TOKEN)
-    response = client.post(f'/add?b2_storage_id={B2_STORAGE_ID}&ll_storage_id={LL_STORAGE_ID}',
-                           json=payload,
-                           headers={X_BZ_SHARED_SECRET: BZ_SHARED_SECRET})
+        # Simulate an 'add' custom action call from iconik
+        payload = get_add_payload(user['id'], system_settings['system_domain_id'], self.asset['id'], ICONIK_TOKEN)
+        response = client.post(f'/add?b2_storage_id={B2_STORAGE_ID}&ll_storage_id={LL_STORAGE_ID}',
+                               json=payload,
+                               headers={X_BZ_SHARED_SECRET: BZ_SHARED_SECRET})
 
-    # Check that the custom action succeeded
-    assert 200 == response.status_code
-    assert 'OK' == response.json
+        # Check that the custom action succeeded
+        assert 200 == response.status_code
+        assert 'OK' == response.json
 
-    # wait for iconik to do its thing
-    wait_for_file_set_count(iconik, asset['id'], 2)
+        # wait for iconik to do its thing
+        wait_for_file_set_count(iconik, self.asset['id'], 2)
 
-    # Check that the asset is in both storages
-    file_sets = iconik.get_asset_file_sets(asset['id'])
-    assert 2 == len(file_sets)
-    assert {B2_STORAGE_ID, LL_STORAGE_ID} == {file_set['storage_id'] for file_set in file_sets}
-    assert all([filename == file_set['name'] for file_set in file_sets])
+        # Check that the asset is in both storages
+        file_sets = iconik.get_asset_file_sets(self.asset['id'])
+        assert 2 == len(file_sets)
+        assert {B2_STORAGE_ID, LL_STORAGE_ID} == {file_set['storage_id'] for file_set in file_sets}
+        assert all([filename == file_set['name'] for file_set in file_sets])
 
-    # Simulate a 'remove' custom action call from iconik - the payload can be the same
-    response = client.post(f'/remove?b2_storage_id={B2_STORAGE_ID}&ll_storage_id={LL_STORAGE_ID}',
-                           json=payload,
-                           headers={X_BZ_SHARED_SECRET: BZ_SHARED_SECRET})
+    @pytest.mark.integration
+    def test_remove_asset(self, client, assert_environment_variables):
+        iconik = Iconik(ICONIK_ID, ICONIK_TOKEN)
+        system_settings = iconik.get_system_settings()
+        user = iconik.get_current_user()
+        filename = os.path.basename(urlparse(TEST_MPEG_URL).path)
 
-    # Check that the custom action succeeded
-    assert 200 == response.status_code
-    assert 'OK' == response.json
+        # Simulate a 'remove' custom action call from iconik
+        payload = get_add_payload(user['id'], system_settings['system_domain_id'], self.asset['id'], ICONIK_TOKEN)
+        response = client.post(f'/remove?b2_storage_id={B2_STORAGE_ID}&ll_storage_id={LL_STORAGE_ID}',
+                               json=payload,
+                               headers={X_BZ_SHARED_SECRET: BZ_SHARED_SECRET})
 
-    # wait for iconik to do its thing
-    wait_for_file_set_count(iconik, asset['id'], 1)
+        # Check that the custom action succeeded
+        assert 200 == response.status_code
+        assert 'OK' == response.json
 
-    # Check that the asset is in only the B2 storage
-    file_sets = iconik.get_asset_file_sets(asset['id'])
-    assert 1 == len(file_sets)
-    assert B2_STORAGE_ID == file_sets[0]['storage_id']
-    assert filename == file_sets[0]['name']
+        # wait for iconik to do its thing
+        wait_for_file_set_count(iconik, self.asset['id'], 1)
 
-    # Delete and purge our asset immediately
-    iconik.delete_asset(asset['id'])
-    iconik.purge_asset(asset['id'])
+        # Check that the asset is in only the B2 storage
+        file_sets = iconik.get_asset_file_sets(self.asset['id'])
+        assert 1 == len(file_sets)
+        assert B2_STORAGE_ID == file_sets[0]['storage_id']
+        assert filename == file_sets[0]['name']
 
-    # wait for iconik to do its thing
-    wait_for_asset_deletion(iconik, asset['id'])
+        # Delete and purge our asset immediately
+        iconik.delete_asset(self.asset['id'])
+        iconik.purge_asset(self.asset['id'])
 
-    # Check that it's gone
-    assert None == iconik.get_asset(asset['id'])
+        # wait for iconik to do its thing
+        wait_for_asset_deletion(iconik, self.asset['id'])
+
+        # Check that it's gone
+        assert None == iconik.get_asset(self.asset['id'])

@@ -275,28 +275,8 @@ class Iconik:
         """
         job_ids = []
 
-        # TODO - see if we can exclude non-existent asset/format combinations
         for format_name in format_names:
-            if request.get("asset_ids") and len(request["asset_ids"]) > 0:
-                payload = {
-                    "object_ids": request["asset_ids"],
-                    "object_type": "assets",
-                    "format_name": format_name
-                }
-                response = self.__post(f"{ICONIK_FILES_API}/storages/{target_storage_id}/bulk/",
-                                       json=payload)
-                job_ids.append(response.json()["job_id"])
-
-            if request.get("collection_ids") and len(request["collection_ids"]) > 0:
-                payload = {
-                    "object_ids": request["collection_ids"],
-                    "object_type": "collections",
-                    "format_name": format_name
-                }
-
-                response = self.__post(f"{ICONIK_FILES_API}/storages/{target_storage_id}/bulk/",
-                                       json=payload)
-                job_ids.append(response.json()["job_id"])
+            job_ids.extend(self.copy_files_for_format(request, format_name, target_storage_id))
 
         if sync:
             # Wait for jobs to complete
@@ -311,6 +291,29 @@ class Iconik:
                     return False
 
         return True
+
+    def copy_files_for_format(self, request, format_name, target_storage_id):
+        job_ids = []
+        if request.get("asset_ids") and len(request["asset_ids"]) > 0:
+            payload = {
+                "object_ids": request["asset_ids"],
+                "object_type": "assets",
+                "format_name": format_name
+            }
+            response = self.__post(f"{ICONIK_FILES_API}/storages/{target_storage_id}/bulk/",
+                                   json=payload)
+            job_ids.append(response.json()["job_id"])
+        if request.get("collection_ids") and len(request["collection_ids"]) > 0:
+            payload = {
+                "object_ids": request["collection_ids"],
+                "object_type": "collections",
+                "format_name": format_name
+            }
+
+            response = self.__post(f"{ICONIK_FILES_API}/storages/{target_storage_id}/bulk/",
+                                   json=payload)
+            job_ids.append(response.json()["job_id"])
+        return job_ids
 
     def delete_action(self, action):
         return self.__delete(
@@ -496,3 +499,6 @@ class Iconik:
 
     def purge_asset(self, asset_id):
         self.__delete(f"{ICONIK_ASSETS_API}/assets/{asset_id}/purge/")
+
+    def get_custom_actions(self):
+        return self.get_objects(f"{ICONIK_ASSETS_API}/custom_actions/")

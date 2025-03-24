@@ -34,7 +34,7 @@ from flask import Flask, request as flask_request
 from flask_restx import Resource, Api
 
 import b2_iconik_plugin
-from b2_iconik_plugin.common import IconikHandler
+from b2_iconik_plugin.common import IconikHandler, DEFAULT_FORMAT_NAMES, check_environment_variables
 from b2_iconik_plugin.logger import Logger
 
 dictConfig({
@@ -62,18 +62,18 @@ class FlaskIconikHandler(IconikHandler):
     """
     Process the request in a subprocess
     """
-    def start_process(self, request, iconik, b2_storage, ll_storage):
+    def start_process(self, request, iconik, b2_storage, ll_storage, format_names):
         if self.is_testing():
             # Process request synchronously so we can check results
-            self.do_process(request, iconik, b2_storage, ll_storage)
+            self.do_process(request, iconik, b2_storage, ll_storage, format_names)
         else:
             # Start a subprocess
-            def process_request(request_, iconik_, b2_storage_, ll_storage_):
-                self.do_process(request_, iconik_, b2_storage_, ll_storage_)
+            def process_request(request_, iconik_, b2_storage_, ll_storage_, format_names_):
+                self.do_process(request_, iconik_, b2_storage_, ll_storage_, format_names_)
 
             p = Process(
                 target=process_request,
-                args=(request, iconik, b2_storage, ll_storage)
+                args=(request, iconik, b2_storage, ll_storage, format_names)
             )
             p.start()
 
@@ -107,12 +107,13 @@ class Plugin(Resource):
         """
         return self._handler.post(flask_request)
 
+
 def create_app(test_config=None):
     app = Flask(__name__)
 
     load_dotenv()
 
-    # TODO - check env vars
+    check_environment_variables(['BZ_SHARED_SECRET', 'ICONIK_ID'])
 
     if test_config is None:
         # Allow subprocess to run after request is handled
@@ -124,7 +125,9 @@ def create_app(test_config=None):
 
     api = Api(app)
 
-    handler = FlaskIconikHandler(Logger(), os.environ['BZ_SHARED_SECRET'], app.config['TESTING'])
+    format_names = os.environ.get("FORMAT_NAMES", DEFAULT_FORMAT_NAMES).split(',')
+    handler = FlaskIconikHandler(
+        Logger(), os.environ['BZ_SHARED_SECRET'], os.environ['ICONIK_ID'], format_names, app.config['TESTING'])
 
     api.add_resource(Plugin, '/<operation>', resource_class_kwargs={'iconik_handler': handler})
 
