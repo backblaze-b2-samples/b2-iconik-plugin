@@ -4,10 +4,15 @@
 
 ### Feature
 
-- Major reorganization and refactoring to simplify logic
 - Added Dockerfile
-- Added integration test
+- Added integration tests
 - Added LICENSE headers
+- Added the `formats` query parameter to the `add` and `remove` operations
+
+### Change
+
+- Major reorganization and refactoring to simplify logic
+- Arguments to the `create_custom_actions` and `delete_custom_actions` scripts are now positional, and do not require flags such as `--endpoint` etc.
 
 ## v1.1.0 (04/24/2023)
 
