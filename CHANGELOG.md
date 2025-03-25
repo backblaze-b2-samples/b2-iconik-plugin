@@ -1,22 +1,28 @@
 # Changelog
 
+## v1.2.1 (03/25/2025)
+
+### Fixes
+
+- Updated app identifier for Gunicorn
+
 ## v1.2.0 (03/20/2025)
 
-### Feature
+### Features
 
 - Added Dockerfile
 - Added integration tests
 - Added LICENSE headers
 - Added the `formats` query parameter to the `add` and `remove` operations
 
-### Change
+### Changes
 
 - Major reorganization and refactoring to simplify logic
 - Arguments to the `create_custom_actions` and `delete_custom_actions` scripts are now positional, and do not require flags such as `--endpoint` etc.
 
 ## v1.1.0 (04/24/2023)
 
-### Feature
+### Features
 
 - After validating the incoming request, the plugin now spawns a subprocess to add/remove files, ensuring it can return a response to iconik within ten seconds.
 - Added version numbering

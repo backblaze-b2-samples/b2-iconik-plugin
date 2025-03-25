@@ -199,13 +199,6 @@ Note - for production deployment, you should also [deploy Nginx as an HTTP proxy
 
 ### In a Docker Container
 
-First, build a Docker image:
-
-	docker build -t b2-iconik-plugin .
-
-If you are building the image on one machine and deploying it on another, you will need to publish it to a container registry 
-such as Docker Hub or GitHub Container Registry. 
-
 You will need to define environment variables in your deployment environment, either in a `.env` file or an alternative mechanism.
 
 	ICONIK_ID='<required: your iconik application token id>'
@@ -214,7 +207,7 @@ You will need to define environment variables in your deployment environment, ei
 
 Now you can run the image. For example, to listen on port 80 on the host, and read environment variables from a `.env` file:
 
-	docker run --env-file .env -p 80:8000 b2-iconik-plugin
+	docker run --env-file .env -p 80:8000 ghcr.io/backblaze-b2-samples/b2-iconik-plugin
 
 ### As a Google Cloud Function
 
@@ -377,6 +370,16 @@ tests/integration_test.py .                                                     
 ...
 ======================================================================================== 1 passed, 3 warnings in 40.03s ========================================================================================
 ```
+
+Building a Docker Image
+-----------------------
+
+If you wish to build a Docker image containing your changes, use the usual command:
+
+	docker build -t b2-iconik-plugin .
+
+If you are building the image on one machine and deploying it on another, you will need to publish it to a container registry
+such as Docker Hub or GitHub Container Registry.
 
 Troubleshooting
 ---------------
