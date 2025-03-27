@@ -122,7 +122,12 @@ def create_app(test_config=None):
     if test_config:
         app.config.from_mapping(test_config)
 
-    api = Api(app)
+    # Helpful message at root
+    @app.route("/")
+    def hello():
+        return "<p>The b2-iconik-plugin is ready for requests</p>"
+
+    api = Api(app, doc=False)  # noqa
 
     format_names = os.environ.get("FORMAT_NAMES", DEFAULT_FORMAT_NAMES).split(',')
     handler = FlaskIconikHandler(
