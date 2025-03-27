@@ -101,4 +101,4 @@ EXPOSE 8000
 # default to running as non-root, uid=1000
 USER python
 
-CMD ["gunicorn", "--pythonpath", "b2_iconik_plugin", "-b", "localhost:8000", "-w", "4", "plugin:create_app"]
+CMD ["gunicorn", "--pythonpath", "b2_iconik_plugin", "--config", "b2_iconik_plugin/gunicorn.conf.py", "plugin:create_app()"]

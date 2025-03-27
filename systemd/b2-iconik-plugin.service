@@ -5,7 +5,7 @@ After=network.target
 [Service]
 User=pat
 WorkingDirectory=/home/pat/b2-iconik-plugin
-ExecStart=/home/pat/.local/bin/gunicorn --pythonpath b2-iconik-plugin -b localhost:8000 -w 4 plugin:create_app
+ExecStart=/home/pat/b2-iconik-plugin/.venv/bin/gunicorn --pythonpath b2_iconik_plugin --config b2_iconik_plugin/gunicorn.conf.py plugin:create_app()
 Restart=always
 
 [Install]
