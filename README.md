@@ -113,9 +113,11 @@ Clone this project:
 
 	git clone https://github.com/backblaze-b2-samples/b2-iconik-plugin.git
 
-Change to the plugin directory and install the required Python modules:
+Change to the plugin directory, create and activate a virtual environment, and install the required Python modules:
 
 	cd b2-iconik-plugin
+    python3 -m venv .venv
+    source .venv/bin/activate
 	pip install -r requirements.txt
 
 Create a file in the plugin directory named `.env` containing your iconik token id, the shared secret you created and,
@@ -142,9 +144,11 @@ Clone this project:
 
 	git clone https://github.com/backblaze-b2-samples/b2-iconik-plugin.git
 
-Change to the plugin directory and install the required Python modules:
+Change to the plugin directory, create and activate a virtual environment, and install the required Python modules:
 
 	cd b2-iconik-plugin
+    python3 -m venv .venv
+    source .venv/bin/activate
 	pip install -r requirements.txt
 
 Create a file in the plugin directory named `.env` containing your iconik token id, the shared secret you created and, 
@@ -154,7 +158,19 @@ optionally, the iconik format names:
 	BZ_SHARED_SECRET='<required: your shared secret>'
 	FORMAT_NAMES='<optional: defaults to ORIGINAL,PPRO_PROXY>'
 
-Open `systemd/b2-iconik-plugin.service` and edit the `User`,
+You can start Gunicorn from the command line to check your configuration:
+
+    gunicorn --pythonpath b2_iconik_plugin --config b2_iconik_plugin/gunicorn.conf.py "plugin:create_app()"
+
+Your plugin's endpoint comprises the instance's public IP address or hostname plus the Gunicorn port number. For example, if your plugin is running at 1.2.3.4, and you left the Gunicorn port as the default 8000, your plugin endpoint is `http://1.2.3.4:8000/`
+
+You can test connectivity to the plugin by opening `http://1.2.3.4:8000/` in a browser or at the command line with curl. You should see a response similar to:
+
+    The b2-iconik-plugin is ready for requests
+
+Stop Gunicorn with Ctrl+C.
+
+Now you can configure systemd to start the plugin automatically. Open `systemd/b2-iconik-plugin.service` and edit the `User`,
 `WorkingDirectory` and `ExecStart` entries to match your system configuration.
 
 Deploy the plugin as a systemd service:
@@ -189,11 +205,7 @@ You should see output similar to this:
 	Aug 16 19:06:36 vultr gunicorn[743403]: [2022-08-16 19:06:36 +0000] [743403] [INFO] Booting worker with pid: 743403
 	Aug 16 19:06:36 vultr gunicorn[743404]: [2022-08-16 19:06:36 +0000] [743404] [INFO] Booting worker with pid: 743404
 
-Your plugin's endpoint comprises the instance's public IP address or hostname plus the Gunicorn port number. For example, if your plugin is running at 1.2.3.4, and you left the Gunicorn port as the default 8000, your plugin endpoint is `http://1.2.3.4:8000/`
-
-You can test connectivity to the plugin by opening `http://1.2.3.4:8000/add` in a browser. You should see an error response similar to:
-
-    {"message": "The method is not allowed for the requested URL."}
+Test once more that your plugin is responding correctly by accessing its endpoint.
 
 Note - for production deployment, you should also [deploy Nginx as an HTTP proxy for Gunicorn](https://docs.gunicorn.org/en/stable/deploy.html#nginx-configuration) and [configure Nginx as an HTTPS server](http://nginx.org/en/docs/http/configuring_https_servers.html). 
 
@@ -267,7 +279,7 @@ Create iconik Custom Actions
 
 Run the included `create_custom_actions.py` script with the endpoint of the plugin and the two storage IDs as arguments. Note that you will need to provide an iconik application token as an environment variable:
 
-	ICONIK_TOKEN = '<your iconik application token value>' \
+	ICONIK_TOKEN=<your iconik application token value> \
 	python -m b2_iconik_plugin.create_custom_actions <your plugin endpoint> \
         <your B2 storage ID in iconik> \
         <your LucidLink storage ID in iconik> \
@@ -275,7 +287,7 @@ Run the included `create_custom_actions.py` script with the endpoint of the plug
 
 For example:
 
-	ICONIK_TOKEN = 'eyhjofprwehjpgrwpg.brwipgbrwjvkpbwripfgbirweupgbi.rgbkfjiewpofrjwrfn' \
+	ICONIK_TOKEN=eyhjofprwehjpgrwpg.brwipgbrwjvkpbwripfgbirweupgbi.rgbkfjiewpofrjwrfn \
 	python -m b2_iconik_plugin.create_custom_actions https://myserver.example.com/ \
         73a746d2-a3ed-4d61-8fd9-aa8f37a27bbb \
         d39b62e1-c586-438a-a82b-70543c228c1b \
@@ -283,7 +295,7 @@ For example:
 
 You can delete the custom actions, if necessary, with:
 
-	ICONIK_TOKEN = '<your iconik application token value>' \
+	ICONIK_TOKEN=<your iconik application token value> \
 	python -m b2_iconik_plugin.delete_custom_actions <your plugin endpoint> \
         <optional, comma-separated list of formats>
 
@@ -343,7 +355,7 @@ You can run integration tests also by running `pytest` with the `--integration` 
 environment must have two storages, and you must create an application token in iconik. You do not need an ISG or
 LucidLink to run the integration tests, since they simply copy and delete files in the iconik storages.
 
-Tou must set the following environment variables:
+Tou must set the following environment variables for integration tests:
 
 ```dotenv
 B2_STORAGE_ID=<ID of your B2 storage>
