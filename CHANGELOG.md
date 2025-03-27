@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.2.2 (03/26/2025)
+
+### Features
+
+- Added resource at root URL
+- Added ability for integration tests to use live plugin
+
+### Changes
+
+- Added instructions on creating venv, starting Gunicorn 
+
+### Fixes
+
+- Gunicorn needs parentheses on plugin:create_app()
+- Fixed gevent workers
+
 ## v1.2.1 (03/25/2025)
 
 ### Fixes
