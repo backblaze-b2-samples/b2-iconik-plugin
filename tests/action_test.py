@@ -38,12 +38,12 @@ TITLES = [
 ]
 
 ENV_VARS = [
-    ([], {"FOO": 1}, None),
-    (["FOO"], {"FOO": 1}, None),
-    (["FOO"], {"FOO": 1, "BAR": 2}, None),
+    ([], {"FOO": "1"}, None),
+    (["FOO"], {"FOO": "1"}, None),
+    (["FOO"], {"FOO": "1", "BAR": "2"}, None),
     (["FOO"], {}, ValueError),
-    (["FOO"], {"BAR": 2}, ValueError),
-    (["FOO", "BAR"], {"FOO": 1, "BAR": 2}, None),
+    (["FOO"], {"BAR": "2"}, ValueError),
+    (["FOO", "BAR"], {"FOO": "1", "BAR": "2"}, None),
 ]
 
 FORMATS = [
