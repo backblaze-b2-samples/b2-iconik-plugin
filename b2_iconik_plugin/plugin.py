@@ -26,7 +26,7 @@
 
 import os
 from logging.config import dictConfig
-from multiprocessing import Process, set_start_method
+import multiprocessing as mp
 
 # Never put credentials in your code!
 from dotenv import load_dotenv
@@ -58,6 +58,11 @@ dictConfig({
 })
 
 
+# target for Process must be in the global scope, since multiprocessing uses pickle
+def process_request(handler, request, iconik, b2_storage, ll_storage, format_names):
+    handler.do_process(request, iconik, b2_storage, ll_storage, format_names)
+
+
 class FlaskIconikHandler(IconikHandler):
     """
     Process the request in a subprocess
@@ -67,13 +72,12 @@ class FlaskIconikHandler(IconikHandler):
             # Process request synchronously so we can check results
             self.do_process(request, iconik, b2_storage, ll_storage, format_names)
         else:
-            # Start a subprocess
-            def process_request(request_, iconik_, b2_storage_, ll_storage_, format_names_):
-                self.do_process(request_, iconik_, b2_storage_, ll_storage_, format_names_)
-
-            p = Process(
+            # Start a subprocess.  We use the 'spawn' context to allow the subprocess to run after the request is handled
+            # See https://github.com/benoitc/gunicorn/issues/2322#issuecomment-619910669
+            ctx = mp.get_context('spawn')
+            p = ctx.Process(
                 target=process_request,
-                args=(request, iconik, b2_storage, ll_storage, format_names)
+                args=(self, request, iconik, b2_storage, ll_storage, format_names),
             )
             p.start()
 
@@ -115,12 +119,7 @@ def create_app(test_config=None):
 
     check_environment_variables(['BZ_SHARED_SECRET', 'ICONIK_ID'])
 
-    if test_config is None:
-        # Allow subprocess to run after request is handled
-        # See https://github.com/benoitc/gunicorn/issues/2322#issuecomment-619910669
-        set_start_method('spawn')
-    else:
-        # We don't spawn subprocesses when running tests
+    if test_config:
         app.config.from_mapping(test_config)
 
     api = Api(app)
