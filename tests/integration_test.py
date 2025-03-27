@@ -160,6 +160,8 @@ class TestAddRemove:
         assert B2_STORAGE_ID == file_sets[0]['storage_id']
         assert filename == file_sets[0]['name']
 
+        logger.debug(f'Calling the plugin /add endpoint{" at " + PLUGIN_ENDPOINT if PLUGIN_ENDPOINT else ""}')
+
         # Simulate an 'add' custom action call from iconik
         payload = create_custom_action_payload(user['id'], system_settings['system_domain_id'], TestAddRemove.asset['id'], ICONIK_TOKEN)
         response = integration_client.post(
@@ -190,6 +192,8 @@ class TestAddRemove:
         system_settings = iconik.get_system_settings()
         user = iconik.get_current_user()
         filename = os.path.basename(urlparse(TEST_MPEG_URL).path)
+
+        logger.debug(f'Calling the plugin /remove endpoint{" at " + PLUGIN_ENDPOINT if PLUGIN_ENDPOINT else ""}')
 
         # Simulate a 'remove' custom action call from iconik
         payload = create_custom_action_payload(user['id'], system_settings['system_domain_id'], TestAddRemove.asset['id'], ICONIK_TOKEN)

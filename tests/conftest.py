@@ -19,6 +19,8 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import logging
+import os
 
 import pytest
 import requests
@@ -28,6 +30,8 @@ from b2_iconik_plugin.gcp import GCP_PROJECT_ID_URL
 from b2_iconik_plugin.iconik import ICONIK_ASSETS_API, ICONIK_JOBS_API
 from b2_iconik_plugin.plugin import create_app
 from tests.test_common import *
+
+logger = logging.getLogger(__name__)
 
 
 def pytest_configure(config):  # noqa
@@ -79,7 +83,9 @@ def client(app):
 def integration_client(app):
     if 'PLUGIN_ENDPOINT' in os.environ:
         # We want to send requests to a test endpoint
+        logger.debug(f'Using requests to send HTTP messages to {os.environ["PLUGIN_ENDPOINT"]}')
         return requests
+    logger.debug(f'Using the Flask test client')
     return app.test_client()
 
 
