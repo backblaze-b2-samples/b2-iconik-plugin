@@ -20,8 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-# Listen on port 80 on all ports
-bind = "0.0.0.0:80"
+# Listen on port 8000 on all addresses
+bind = "0.0.0.0:8000"
 
 # Start 4 worker threads
 workers = 4
