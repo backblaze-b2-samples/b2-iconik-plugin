@@ -21,6 +21,7 @@
 # SOFTWARE.
 
 import pytest
+import requests
 from responses import matchers
 
 from b2_iconik_plugin.gcp import GCP_PROJECT_ID_URL
@@ -70,6 +71,15 @@ def app():
 # Make a Flask client so we can do POST requests
 @pytest.fixture
 def client(app):
+    return app.test_client()
+
+
+# Make a  client that can optionally also do real requests
+@pytest.fixture
+def integration_client(app):
+    if 'PLUGIN_ENDPOINT' in os.environ:
+        # We want to send requests to a test endpoint
+        return requests
     return app.test_client()
 
 
