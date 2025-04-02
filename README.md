@@ -36,7 +36,7 @@ You must create an iconik Storage with Storage Purpose **Files** and Storage Typ
 Deploy iconik Storage Gateway
 -----------------------------
 
-You must deploy both [iconik Storage Gateway](https://app.iconik.io/help/pages/isg/) (ISG) and the [LucidLink client](https://www.lucidlink.com/download) to a machine with access to iconik, LucidLink and B2.  [Vultr](https://www.vultr.com/) is ideal for this purpose, as it enjoys zero cost egress from B2. If you deploy ISG elsewhere, egress from B2 is free for up to 3x your average amount stored for the month, then $10/TB.
+You must deploy both [iconik Storage Gateway](https://app.iconik.io/help/pages/isg/) (ISG) and the [LucidLink client](https://www.lucidlink.com/download) to a platform with access to iconik, LucidLink and B2.  [Vultr](https://www.vultr.com/) is ideal for this purpose, as it enjoys zero cost egress from B2. If you deploy ISG elsewhere, egress from B2 is free for up to 3x your average amount stored for the month, then $10/TB. Note that the plugin must be accessible to incoming connections from iconik via a TCP/IP port. You may need to configure your firewall to allow incoming connections on your chosen port. 
 
 Configure the LucidLink client to access the desired FileSpace. Configure ISG to use the LucidLink directory as [Files Storage](https://app.iconik.io/help/pages/isg/files_storage). Again, make a note of the storage ID.
 
