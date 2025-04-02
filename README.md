@@ -19,20 +19,13 @@ The plugin is implemented in Python and may be deployed as a standalone Flask ap
 * [Create an iconik Storage for your Backblaze B2 Bucket](#create-an-iconik-storage-for-your-backblaze-b2-bucket)
 * [Deploy iconik Storage Gateway](#deploy-iconik-storage-gateway)
 * [Create an iconik Application Token](#create-an-iconik-application-token)
+* [Configuration](#configuration)
 * [Deploy the Plugin](#deploy-the-plugin)
-  * [In the Flask Development Server](#in-the-flask-development-server)
-    * [Prerequisites](#prerequisites)
-  * [As a Standalone Flask App in Gunicorn](#as-a-standalone-flask-app-in-gunicorn)
-    * [Prerequisites](#prerequisites-1)
-    * [Deployment](#deployment)
-  * [In a Docker Container](#in-a-docker-container)
-  * [As a Google Cloud Function](#as-a-google-cloud-function)
-    * [Set up the function](#set-up-the-function)
-    * [Configure the Function](#configure-the-function)
-    * [Deploy the Function](#deploy-the-function)
 * [Create iconik Custom Actions](#create-iconik-custom-actions)
 * [Test the Integration](#test-the-integration)
 * [Modifying the Code](#modifying-the-code)
+* [Building a Docker Image](#building-a-docker-image)
+* [Troubleshooting](#troubleshooting)
 <!-- TOC -->
 
 Create an iconik Storage for your Backblaze B2 Bucket
@@ -43,9 +36,9 @@ You must create an iconik Storage with Storage Purpose **Files** and Storage Typ
 Deploy iconik Storage Gateway
 -----------------------------
 
-You must deploy both [iconik Storage Gateway](https://app.iconik.io/help/pages/isg/) (ISG) and the [LucidLink client](https://www.lucidlink.com/download) to a machine with access to iconik, LucidLink and B2.  [Vultr](https://www.vultr.com/) is ideal for this purpose, as it enjoys zero cost egress from B2. If you deploy ISG elsewhere, you will be paying $10/TB for data downloaded from B2.
+You must deploy both [iconik Storage Gateway](https://app.iconik.io/help/pages/isg/) (ISG) and the [LucidLink client](https://www.lucidlink.com/download) to a machine with access to iconik, LucidLink and B2.  [Vultr](https://www.vultr.com/) is ideal for this purpose, as it enjoys zero cost egress from B2. If you deploy ISG elsewhere, egress from B2 is free for up to 3x your average amount stored for the month, then $10/TB.
 
-Configure the LucidLink client to access the desired FileSpace. Configure ISG to use the LucidLink directory as [Files Storage](https://app.iconik.io/help/pages/isg/files_storage). Make a note of the storage ID.
+Configure the LucidLink client to access the desired FileSpace. Configure ISG to use the LucidLink directory as [Files Storage](https://app.iconik.io/help/pages/isg/files_storage). Again, make a note of the storage ID.
 
 Create an iconik Application Token
 ----------------------------------
@@ -60,7 +53,9 @@ custom action requests from iconik to the plugin.
 
 For example, with `openssl`:
 
-    openssl rand -hex 32
+```bash
+openssl rand -hex 32
+```
 
 Keep a note of the shared secret!
 
@@ -86,8 +81,8 @@ LucidLink. For example, you might create a total of four custom actions:
 * Remove proxy files from LucidLink
 
 If you wish to create just two custom actions, and you need a different list of format names from the default, `ORIGINAL` 
-and `PPRO_PROXY`, you can set the format names via an environment variable. For example, to have the plugin add/remove 
-just Premiere Pro proxy files, you would use:
+and `PPRO_PROXY`, you can set the format names as a comma-separated list in an environment variable. For example, to have
+the plugin add/remove just Premiere Pro proxy files, you would use:
 
 ```dotenv
 FORMAT_NAMES=PPRO_PROXY
@@ -99,9 +94,52 @@ takes precedence.
 Deploy the Plugin
 -----------------
 
-### In the Flask Development Server
+Since the plugin is simply a Python application, there are many ways to deploy it, depending on your needs:
 
-You can run it in Flask's development server for development and testing, but do not use the development server for 
+As a standalone app:
+
+* [Flask Development Server](#flask-development-server)
+* [Flask App in Gunicorn](#standalone-flask-app-in-gunicorn)
+* [macOS Launch Daemon](#macos-launch-daemon)
+
+In a Docker container:
+
+* [Docker](#docker)
+
+In a serverless environment:
+
+* [Google Cloud Function](#google-cloud-function)
+
+### Common Steps for Running as a Standalone App
+
+Clone this project:
+
+```bash
+git clone https://github.com/backblaze-b2-samples/b2-iconik-plugin.git
+```
+
+Change to the plugin directory, create and activate a virtual environment, and install the required Python modules:
+
+```bash
+cd b2-iconik-plugin
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+There are several settings that are configured via environment variables:
+
+```dotenv
+ICONIK_ID=<required: your iconik application token id>
+BZ_SHARED_SECRET=<required: your shared secret>
+FORMAT_NAMES=<optional: defaults to ORIGINAL,PPRO_PROXY>
+```
+
+An easy way to configure these variables is to create a file in the plugin directory named `.env` with the above content.
+
+### Flask Development Server
+
+You can run the plugin in Flask's development server for development and testing, but do not use the development server for 
 production deployments.
 
 #### Prerequisites
@@ -109,29 +147,14 @@ production deployments.
 * [Python 3.9+](https://www.python.org/downloads/)
 * [pip](https://pypi.org/project/pip/)
 
-Clone this project:
+Follow the [Common Steps for Running as a Standalone App](#common-steps-for-running-as-a-standalone-app), then run the 
+app via Flask's development server
 
-	git clone https://github.com/backblaze-b2-samples/b2-iconik-plugin.git
+```bash
+flask --app b2_iconik_plugin/plugin.py run
+```
 
-Change to the plugin directory, create and activate a virtual environment, and install the required Python modules:
-
-	cd b2-iconik-plugin
-    python3 -m venv .venv
-    source .venv/bin/activate
-	pip install -r requirements.txt
-
-Create a file in the plugin directory named `.env` containing your iconik token id, the shared secret you created and,
-optionally, the iconik format names:
-
-	ICONIK_ID='<required: your iconik application token id>'
-	BZ_SHARED_SECRET='<required: your shared secret>'
-	FORMAT_NAMES='<optional: defaults to ORIGINAL,PPRO_PROXY>'
-
-Now you can run the app via Flask's development server
-
-    flask --app b2_iconik_plugin/plugin.py run
-
-### As a Standalone Flask App in Gunicorn
+### Standalone Flask App in Gunicorn
 
 #### Prerequisites
 
@@ -140,88 +163,175 @@ Now you can run the app via Flask's development server
 
 #### Deployment
 
-Clone this project:
+Follow the [Common Steps for Running as a Standalone App](#common-steps-for-running-as-a-standalone-app), then start
+Gunicorn from the command line to check your configuration:
 
-	git clone https://github.com/backblaze-b2-samples/b2-iconik-plugin.git
-
-Change to the plugin directory, create and activate a virtual environment, and install the required Python modules:
-
-	cd b2-iconik-plugin
-    python3 -m venv .venv
-    source .venv/bin/activate
-	pip install -r requirements.txt
-
-Create a file in the plugin directory named `.env` containing your iconik token id, the shared secret you created and, 
-optionally, the iconik format names:
-
-	ICONIK_ID='<required: your iconik application token id>'
-	BZ_SHARED_SECRET='<required: your shared secret>'
-	FORMAT_NAMES='<optional: defaults to ORIGINAL,PPRO_PROXY>'
-
-You can start Gunicorn from the command line to check your configuration:
-
-    gunicorn --pythonpath b2_iconik_plugin --config b2_iconik_plugin/gunicorn.conf.py "plugin:create_app()"
+```bash
+gunicorn --pythonpath b2_iconik_plugin --config b2_iconik_plugin/gunicorn.conf.py "plugin:create_app()"
+```
 
 Your plugin's endpoint comprises the instance's public IP address or hostname plus the Gunicorn port number. For example, if your plugin is running at 1.2.3.4, and you left the Gunicorn port as the default 8000, your plugin endpoint is `http://1.2.3.4:8000/`
 
 You can test connectivity to the plugin by opening `http://1.2.3.4:8000/` in a browser or at the command line with curl. You should see a response similar to:
 
-    The b2-iconik-plugin is ready for requests
+```text
+The b2-iconik-plugin is ready for requests
+```
 
 Stop Gunicorn with Ctrl+C.
 
-Now you can configure systemd to start the plugin automatically. Open `systemd/b2-iconik-plugin.service` and edit the `User`,
+Now you can configure systemd to start the plugin automatically. Open [`systemd/b2-iconik-plugin.service`](systemd/b2-iconik-plugin.service) and edit the `User`,
 `WorkingDirectory` and `ExecStart` entries to match your system configuration.
 
 Deploy the plugin as a systemd service:
 
-	sudo cp systemd/b2-iconik-plugin.service /etc/systemd/system
-	sudo systemctl daemon-reload
-	sudo systemctl start b2-iconik-plugin
-	sudo systemctl status b2-iconik-plugin
+```bash
+sudo cp systemd/b2-iconik-plugin.service /etc/systemd/system
+sudo systemctl daemon-reload
+sudo systemctl start b2-iconik-plugin
+sudo systemctl status b2-iconik-plugin
+```
 
 You should see output similar to this:
 
-	● b2-iconik-plugin.service - Backblaze B2 iconik Plugin
-	Loaded: loaded (/etc/systemd/system/b2-iconik-plugin.service; disabled; vendor preset: enabled)
-	Active: active (running) since Tue 2022-08-16 19:06:36 UTC; 11s ago
-	Main PID: 743400 (gunicorn)
-	Tasks: 5 (limit: 4678)
-	Memory: 92.8M
-	CPU: 804ms
-	CGroup: /system.slice/b2-iconik-plugin.service
-	├─743400 /usr/bin/python3 /home/pat/.local/bin/gunicorn -b localhost:8000 -w 4 plugin:app
-	├─743401 /usr/bin/python3 /home/pat/.local/bin/gunicorn -b localhost:8000 -w 4 plugin:app
-	├─743402 /usr/bin/python3 /home/pat/.local/bin/gunicorn -b localhost:8000 -w 4 plugin:app
-	├─743403 /usr/bin/python3 /home/pat/.local/bin/gunicorn -b localhost:8000 -w 4 plugin:app
-	└─743404 /usr/bin/python3 /home/pat/.local/bin/gunicorn -b localhost:8000 -w 4 plugin:app
-	
-	Aug 16 19:06:36 vultr systemd[1]: Started Backblaze B2 iconik Plugin.
-	Aug 16 19:06:36 vultr gunicorn[743400]: [2022-08-16 19:06:36 +0000] [743400] [INFO] Starting gunicorn 20.1.0
-	Aug 16 19:06:36 vultr gunicorn[743400]: [2022-08-16 19:06:36 +0000] [743400] [INFO] Listening at: http://127.0.0.1:8000 (743400)
-	Aug 16 19:06:36 vultr gunicorn[743400]: [2022-08-16 19:06:36 +0000] [743400] [INFO] Using worker: sync
-	Aug 16 19:06:36 vultr gunicorn[743401]: [2022-08-16 19:06:36 +0000] [743401] [INFO] Booting worker with pid: 743401
-	Aug 16 19:06:36 vultr gunicorn[743402]: [2022-08-16 19:06:36 +0000] [743402] [INFO] Booting worker with pid: 743402
-	Aug 16 19:06:36 vultr gunicorn[743403]: [2022-08-16 19:06:36 +0000] [743403] [INFO] Booting worker with pid: 743403
-	Aug 16 19:06:36 vultr gunicorn[743404]: [2022-08-16 19:06:36 +0000] [743404] [INFO] Booting worker with pid: 743404
+```plain
+● b2-iconik-plugin.service - Backblaze B2 iconik Plugin
+Loaded: loaded (/etc/systemd/system/b2-iconik-plugin.service; disabled; vendor preset: enabled)
+Active: active (running) since Tue 2022-08-16 19:06:36 UTC; 11s ago
+Main PID: 743400 (gunicorn)
+Tasks: 5 (limit: 4678)
+Memory: 92.8M
+CPU: 804ms
+CGroup: /system.slice/b2-iconik-plugin.service
+├─743400 /usr/bin/python3 /home/pat/.local/bin/gunicorn -b localhost:8000 -w 4 plugin:app
+├─743401 /usr/bin/python3 /home/pat/.local/bin/gunicorn -b localhost:8000 -w 4 plugin:app
+├─743402 /usr/bin/python3 /home/pat/.local/bin/gunicorn -b localhost:8000 -w 4 plugin:app
+├─743403 /usr/bin/python3 /home/pat/.local/bin/gunicorn -b localhost:8000 -w 4 plugin:app
+└─743404 /usr/bin/python3 /home/pat/.local/bin/gunicorn -b localhost:8000 -w 4 plugin:app
+
+Aug 16 19:06:36 vultr systemd[1]: Started Backblaze B2 iconik Plugin.
+Aug 16 19:06:36 vultr gunicorn[743400]: [2022-08-16 19:06:36 +0000] [743400] [INFO] Starting gunicorn 20.1.0
+Aug 16 19:06:36 vultr gunicorn[743400]: [2022-08-16 19:06:36 +0000] [743400] [INFO] Listening at: http://127.0.0.1:8000 (743400)
+Aug 16 19:06:36 vultr gunicorn[743400]: [2022-08-16 19:06:36 +0000] [743400] [INFO] Using worker: sync
+Aug 16 19:06:36 vultr gunicorn[743401]: [2022-08-16 19:06:36 +0000] [743401] [INFO] Booting worker with pid: 743401
+Aug 16 19:06:36 vultr gunicorn[743402]: [2022-08-16 19:06:36 +0000] [743402] [INFO] Booting worker with pid: 743402
+Aug 16 19:06:36 vultr gunicorn[743403]: [2022-08-16 19:06:36 +0000] [743403] [INFO] Booting worker with pid: 743403
+Aug 16 19:06:36 vultr gunicorn[743404]: [2022-08-16 19:06:36 +0000] [743404] [INFO] Booting worker with pid: 743404
+```
 
 Test once more that your plugin is responding correctly by accessing its endpoint.
 
 Note - for production deployment, you should also [deploy Nginx as an HTTP proxy for Gunicorn](https://docs.gunicorn.org/en/stable/deploy.html#nginx-configuration) and [configure Nginx as an HTTPS server](http://nginx.org/en/docs/http/configuring_https_servers.html). 
 
-### In a Docker Container
+### macOS Launch Daemon
 
-You will need to define environment variables in your deployment environment, either in a `.env` file or an alternative mechanism.
+Follow the [Common Steps for Running as a Standalone App](#common-steps-for-running-as-a-standalone-app), then start
+Gunicorn from the command line to check your configuration:
 
-	ICONIK_ID='<required: your iconik application token id>'
-	BZ_SHARED_SECRET='<required: your shared secret>'
-	FORMAT_NAMES='<optional: defaults to ORIGINAL,PPRO_PROXY>'
+```bash
+gunicorn --pythonpath b2_iconik_plugin --config b2_iconik_plugin/gunicorn.conf.py "plugin:create_app()"
+```
+
+Your plugin's endpoint comprises the instance's public IP address or hostname plus the Gunicorn port number. For example, if your plugin is running at 1.2.3.4, and you left the Gunicorn port as the default 8000, your plugin endpoint is `http://1.2.3.4:8000/`
+
+You can test connectivity to the plugin by opening `http://1.2.3.4:8000/` in a browser or at the command line with curl. You should see a response similar to:
+
+```text
+The b2-iconik-plugin is ready for requests
+```
+
+Stop Gunicorn with Ctrl+C.
+
+Now you can configure macOS `launchd` to start the plugin automatically. Open [`launchd/com.backblaze.b2-iconik-plugin.plist`](launchd/com.backblaze.b2-iconik-plugin.plist) and edit the 
+`WorkingDirectory` entry to match your system configuration.
+
+The provided plist file runs the plugin with the `_www` user and group to limit its permissions. You may change this to 
+suit your environment.
+
+The plist file contains a commented out block at the bottom that configures `StandardErrorPath` and `StandardOutPath`. 
+Setting these to file in a directory to which the plugin user has write permission is useful in debugging, but note that
+there is no automatic log rotation on these files, so you should comment out this block once things are working, or 
+configure log rotation so that they do not grow indefinitely.
+
+1. Copy the plist file to the appropriate location. You will need to provide your password for the sudo command, but that
+permission lasts for a little while, so you won't have to do it for every command below:
+
+    ```bash
+    sudo cp com.backblaze.b2-iconik-plugin.plist /Library/LaunchDaemons/
+    ```
+
+2. Set the correct owner and permissions on the plist file, or macOS will not use it (this is a security measure - you 
+don't want everyone with an account on the machine to be able to mess with it):
+
+	```bash
+	sudo chown root:wheel /Library/LaunchDaemons/com.backblaze.b2-iconik-plugin.plist
+	sudo chmod 644 /Library/LaunchDaemons/com.backblaze.b2-iconik-plugin.plist
+	```
+
+3. Enable the plugin - this will cause it to be loaded each time you boot:
+
+	```bash
+	sudo launchctl enable system/com.backblaze.b2-iconik-plugin
+	```
+
+4. Bootstrap the plugin - this loads the plugin right now, without you needing to reboot:
+
+	```bash
+	sudo launchctl bootstrap system /Library/LaunchDaemons/com.backblaze.b2-iconik-plugin.plist
+	```
+
+5. Print information about the service:
+
+	```bash
+	sudo launchctl print system/com.backblaze.b2-iconik-plugin
+	```
+
+	This provides a _lot_ of information; the key thing you are looking for is `state = running` near the top, around the 
+	4th line.
+
+Now the plugin should be running and listening for requests. You can run the same curl test as before to check:
+
+```bash
+curl http://1.2.3.4:8000/
+```
+
+Additional useful commands, in case you need them:
+
+* Unload the service so it is no longer running:
+
+    ```bash
+    sudo launchctl bootout system /Library/LaunchDaemons/com.backblaze.b2-iconik-plugin.plist
+    ```
+
+* Disable the service so it no longer runs at boot:
+
+	```bash
+	sudo launchctl disable system/com.backblaze.b2-iconik-plugin
+	```
+
+* Remove the plist file:
+
+	```bash
+	sudo rm /Library/LaunchDaemons/com.backblaze.b2-iconik-plugin.plist
+	```
+
+### Docker
+
+You will need to define environment variables in your deployment environment, either in a `.env` file or using an alternative mechanism.
+
+```dotenv
+ICONIK_ID=<required: your iconik application token id>
+BZ_SHARED_SECRET=<required: your shared secret>
+FORMAT_NAMES=<optional: defaults to ORIGINAL,PPRO_PROXY>
+```
 
 Now you can run the image. For example, to listen on port 80 on the host, and read environment variables from a `.env` file:
 
-	docker run --env-file .env -p 80:8000 ghcr.io/backblaze-b2-samples/b2-iconik-plugin
+```bash
+docker run --env-file .env -p 80:8000 ghcr.io/backblaze-b2-samples/b2-iconik-plugin
+```
 
-### As a Google Cloud Function
+### Google Cloud Function
 
 #### Set up the function
 
@@ -231,73 +341,97 @@ Now you can run the image. For example, to listen on port 80 on the host, and re
 4. If necessary, [install and initialize the gcloud CLI](https://cloud.google.com/sdk/docs).
 5. Update and install gcloud components:
 
-		gcloud components update
+    ```bash
+    gcloud components update
+    ```
 
 6. If necessary, [set up a Python development environment](https://cloud.google.com/python/docs/setup).
 7. Clone this repository to a directory on your local machine:
 
-		git clone git@github.com:backblaze-b2-samples/b2-iconik-plugin.git
+    ```bash
+    git clone git@github.com:backblaze-b2-samples/b2-iconik-plugin.git
+    ```
 
 #### Configure the Function
 
 Create the file `.env.yaml` in the project directory, with the following content:
 
-	ICONIK_ID: '<required: your iconik application token id>'
-	FORMAT_NAMES: '<optional: defaults to ORIGINAL,PPRO_PROXY>'
+```yaml
+ICONIK_ID: '<required: your iconik application token id>'
+FORMAT_NAMES: '<optional: defaults to ORIGINAL,PPRO_PROXY>'
+```
 
 [Create the following secret](https://cloud.google.com/secret-manager/docs/creating-and-accessing-secrets#create) in Google Secret Manager:
 
-	bz-shared-secret: '<your shared secret>'
+```yaml
+bz-shared-secret: '<your shared secret>'
+```
 
 #### Deploy the Function
 
 From the command line in the project directory, run
 
-	gcloud functions deploy iconik_handler \
-	--runtime python39 --trigger-http --allow-unauthenticated --env-vars-file .env.yaml
+```bash
+gcloud functions deploy iconik_handler \
+    --runtime python39 --trigger-http --allow-unauthenticated --env-vars-file .env.yaml
+```
 
 Make a note of the `httpsTrigger.url` property, or find it with:
 
-    gcloud functions describe iconik_handler
+```bash
+gcloud functions describe iconik_handler
+```
 
 It should look like this:
 
-    https://<GCP_REGION-PROJECT_ID>.cloudfunctions.net/iconik_handler
+```text
+https://<GCP_REGION-PROJECT_ID>.cloudfunctions.net/iconik_handler
+```
 
 You'll use this endpoint when you create the custom actions in iconik in the next step.
 
-You can test connectivity to the plugin by opening `https://<GCP_REGION-PROJECT_ID>.cloudfunctions.net/iconik_handler/add` in a browser. You should see an error response similar to:
+You can test connectivity to the plugin by opening `https://<GCP_REGION-PROJECT_ID>.cloudfunctions.net/iconik_handler/` in a browser. You should see a response similar to:
 
-    {"message": "The method is not allowed for the requested URL."}
+```text
+The b2-iconik-plugin is ready for requests
+```
 
 You can view logs for the function with:
 
-    gcloud functions logs read
+```bash
+gcloud functions logs read
+```
 
 Create iconik Custom Actions
 ----------------------------
 
 Run the included `create_custom_actions.py` script with the endpoint of the plugin and the two storage IDs as arguments. Note that you will need to provide an iconik application token as an environment variable:
 
-	ICONIK_TOKEN=<your iconik application token value> \
-	python -m b2_iconik_plugin.create_custom_actions <your plugin endpoint> \
-        <your B2 storage ID in iconik> \
-        <your LucidLink storage ID in iconik> \
-        <optional, comma-separated list of formats>
+```bash
+ICONIK_TOKEN=<your iconik application token value> \
+python -m b2_iconik_plugin.create_custom_actions <your plugin endpoint> \
+    <your B2 storage ID in iconik> \
+    <your LucidLink storage ID in iconik> \
+    <optional, comma-separated list of formats>
+```
 
 For example:
 
-	ICONIK_TOKEN=eyhjofprwehjpgrwpg.brwipgbrwjvkpbwripfgbirweupgbi.rgbkfjiewpofrjwrfn \
-	python -m b2_iconik_plugin.create_custom_actions https://myserver.example.com/ \
-        73a746d2-a3ed-4d61-8fd9-aa8f37a27bbb \
-        d39b62e1-c586-438a-a82b-70543c228c1b \
-        PPRO_PROXY
+```bash
+ICONIK_TOKEN=eyhjofprwehjpgrwpg.brwipgbrwjvkpbwripfgbirweupgbi.rgbkfjiewpofrjwrfn \
+python -m b2_iconik_plugin.create_custom_actions https://myserver.example.com/ \
+    73a746d2-a3ed-4d61-8fd9-aa8f37a27bbb \
+    d39b62e1-c586-438a-a82b-70543c228c1b \
+    PPRO_PROXY
+```
 
 You can delete the custom actions, if necessary, with:
 
-	ICONIK_TOKEN=<your iconik application token value> \
-	python -m b2_iconik_plugin.delete_custom_actions <your plugin endpoint> \
-        <optional, comma-separated list of formats>
+```bash
+ICONIK_TOKEN=<your iconik application token value> \
+python -m b2_iconik_plugin.delete_custom_actions <your plugin endpoint> \
+    <optional, comma-separated list of formats>
+```
 
 If you do not specify a list of formats, then this command will delete all custom actions that match the endpoint. If you do
 supply a list of formats, only custom actions with matching format lists will be deleted.
@@ -388,7 +522,9 @@ Building a Docker Image
 
 If you wish to build a Docker image containing your changes, use the usual command:
 
-	docker build -t b2-iconik-plugin .
+```bash
+docker build -t b2-iconik-plugin .
+```
 
 If you are building the image on one machine and deploying it on another, you will need to publish it to a container registry
 such as Docker Hub or GitHub Container Registry.
@@ -400,4 +536,4 @@ The default configuration, if you do not explicitly configure `FORMAT_NAMES`, is
 `ORIGINAL` and `PPRO_PROXY` formats for each asset. You will see errors in the iconik jobs dashboard if you copy assets that
 do not have a file for a configured format. If you are not creating `PPRO_PROXY` files, then set `FORMAT_NAMES` to `ORIGINAL`.
 Conversely, if you are using a format other than `PPRO_PROXY`, you might want to set `FORMAT_NAMES` to a value such as 
-`ORIGINAL, MY_COOL_FORMAT`.
+`ORIGINAL,MY_COOL_FORMAT`.

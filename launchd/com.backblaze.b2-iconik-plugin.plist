@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+    "v">
+<plist>
+    <dict>
+        <key>Label</key>
+        <string>com.backblaze.b2-iconik-plugin</string>
+        <!--
+            Set the working directory to the plugin repository location.
+        -->
+        <key>WorkingDirectory</key>
+        <string>/Users/ppatterson/src/b2-iconik-plugin</string>
+        <key>ProgramArguments</key>
+        <array>
+            <!--
+                We specify the path to the gunicorn script in .venv/bin so that it
+                picks up the correct Python virtual environment.
+            -->
+            <string>.venv/bin/gunicorn</string>
+            <string>--pythonpath</string>
+            <string>b2_iconik_plugin</string>
+            <string>--config</string>
+            <string>b2_iconik_plugin/gunicorn.conf.py</string>
+            <string>plugin:create_app()</string>
+        </array>
+        <!--
+            Run the plugin immediately on load (at system boot), rather than every
+            'n' seconds or at a specific time.
+        -->
+        <key>RunAtLoad</key>
+        <true/>
+        <!--
+            Restart the plugin should it ever go down.
+        -->
+        <key>KeepAlive</key>
+        <true/>
+        <!--
+            Run the plugin with the _www user and group to limit its permissions.
+        -->
+        <key>UserName</key>
+        <string>_www</string>
+        <key>GroupName</key>
+        <string>_www</string>
+        <!--
+            Uncomment the following block for debugging. If you change the
+            UserName/GroupName, delete the err/out files, since the new user likely
+            won't have permissions to write to the existing files.
+
+            Note that there is no automatic log rotation on these files, so you
+            should comment out this block once things are working, or configure
+            log rotation so that they do not grow indefinitely.
+        -->
+        <!--
+        <key>StandardErrorPath</key>
+        <string>/tmp/b2-iconik-plugin.err</string>
+        <key>StandardOutPath</key>
+        <string>/tmp/b2-iconik-plugin.out</string></dict>
+        -->
+    </dict>
+</plist>
